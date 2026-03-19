@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import auth
 from app.routes import quiz
 from app.routes import doubt
+from app.routes import arena
 from app.core.database import connect_to_mongo, close_mongo_connection
 from contextlib import asynccontextmanager
 
@@ -34,6 +35,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(quiz.router)
 app.include_router(doubt.router)
+app.include_router(arena.router)
 
 @app.get("/")
 async def health_check():
