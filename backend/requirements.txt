@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+motor
+pydantic[email]
+pydantic-settings
+bcrypt
+PyJWT
+python-dotenv
+python-multipart
+google-genai
+httpx

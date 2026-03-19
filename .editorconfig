@@ -1,0 +1,21 @@
+# http://editorconfig.org
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# JS/TS/CSS/HTML/JSON often use 2-space indentation
+[*.{js,jsx,ts,tsx,json,css,html,yml,yaml}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+# Python is 4-space indent
+[*.py]
+indent_size = 4

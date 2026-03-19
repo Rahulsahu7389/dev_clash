@@ -1,0 +1,33 @@
+# ===========================
+# Git Attributes (Line Endings)
+# ===========================
+
+# Enforce LF on check-in for text files
+* text=auto eol=lf
+
+# Explicitly mark certain files as text (LF enforced)
+*.py text
+*.js text
+*.jsx text
+*.ts text
+*.tsx text
+*.css text
+*.html text
+*.md text
+*.json text
+*.yaml text
+*.yml text
+*.gitignore text
+*.env.example text
+.gitattributes text
+
+# Denote binary files (no LF/CRLF conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
