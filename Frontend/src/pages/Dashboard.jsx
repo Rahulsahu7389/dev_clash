@@ -1,13 +1,25 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import api from '../api/axios';
+import { motion } from 'framer-motion';
+import { Trophy, Swords, Sparkles, BrainCircuit } from 'lucide-react';
 
 export default function Dashboard() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    api.get('/auth/me')
+      .then(res => setUser(res.data))
+      .catch(err => console.error("Could not fetch user info", err));
+  }, []);
+
   return (
     <>
       {/* Top Banner / Hero */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 bg-surface-container-low p-8 rounded-xl relative overflow-hidden flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-surface-container-low p-8 rounded-xl relative overflow-hidden flex flex-col justify-between border border-outline-variant/10 shadow-lg">
           <div className="relative z-10">
-            <h2 className="font-headline text-4xl font-bold tracking-tight mb-2">Welcome back, Alex.</h2>
+            <h2 className="font-headline text-4xl font-bold tracking-tight mb-2">Welcome back, {user ? user.username : 'Alex'}.</h2>
             <p className="text-on-surface-variant flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-tertiary"></span>
               Your focus score is 12% higher than yesterday.
@@ -17,12 +29,12 @@ export default function Dashboard() {
             <div>
               <p className="text-[10px] font-label tracking-widest text-on-surface-variant uppercase mb-1">Current Rank</p>
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 shadow-[0_0_15px_rgba(76,215,246,0.2)]">
-                  <span className="material-symbols-outlined text-primary text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.2)]">
+                  <Trophy className="text-primary w-6 h-6" />
                 </div>
                 <div>
-                  <p className="font-headline text-2xl font-bold">Scholar</p>
-                  <p className="text-xs text-primary">Top 4% Overall</p>
+                  <p className="font-headline text-2xl font-bold">{user ? user.role : 'Scholar'}</p>
+                  <p className="text-xs text-primary">ELO Rating: {user ? user.elo_rating : '1200'}</p>
                 </div>
               </div>
             </div>
@@ -141,24 +153,22 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Urgent Review */}
+        {/* Urgency & Arena Integration */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="bg-surface-container-low p-6 rounded-xl">
-            <h3 className="font-headline text-lg font-bold mb-4">Urgent Review</h3>
-            <div className="space-y-4">
-              <div className="p-4 bg-surface-container-lowest rounded-lg border-l-2 border-error/50">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm font-bold">Organic Chemistry</span>
-                  <span className="text-error text-[10px] font-bold">Low Retent.</span>
-                </div>
-                <div className="w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
-                  <div className="bg-error h-full" style={{ width: '22%' }}></div>
-                </div>
-              </div>
+          <div className="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10 shadow-md">
+            <h3 className="font-headline text-lg font-bold mb-4 flex items-center gap-2">
+              <Swords className="w-5 h-5 text-secondary" /> Competitive Arena
+            </h3>
+            <div className="p-5 bg-surface-container-lowest rounded-2xl mb-6 relative group overflow-hidden border border-outline-variant/10">
+               <div className="relative z-10">
+                  <p className="text-sm font-bold mb-1">Global Queue Active</p>
+                  <p className="text-[10px] text-on-surface-variant leading-relaxed">Stake your ELO and prove your dominance in real-time battle.</p>
+               </div>
+               <div className="absolute inset-0 bg-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <button className="w-full mt-4 py-2 text-xs font-bold text-on-surface-variant border border-outline-variant/20 rounded-lg hover:bg-surface-container-high transition-colors">
-              Analyze Weaknesses
-            </button>
+            <Link to="/arena" className="w-full py-3 bg-secondary text-on-secondary text-sm font-bold rounded-xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-lg shadow-secondary/10">
+              Enter The Arena
+            </Link>
           </div>
         </div>
       </div>
@@ -171,7 +181,7 @@ export default function Dashboard() {
           <p className="text-sm font-bold text-on-surface">Study Session Invite</p>
           <p className="text-xs text-on-surface-variant">Saurav is studying <b>Fluid Mechanics</b>. Join the arena?</p>
           <div className="flex gap-2 mt-2">
-            <button className="px-3 py-1 bg-primary text-on-primary text-[10px] font-bold rounded-md">Join Now</button>
+            <Link to="/arena" className="px-3 py-1 bg-primary text-on-primary text-[10px] font-bold rounded-md">Join Now</Link>
             <button className="px-3 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-bold rounded-md">Later</button>
           </div>
         </div>

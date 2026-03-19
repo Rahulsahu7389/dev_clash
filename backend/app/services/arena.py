@@ -20,7 +20,7 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
 
-    def disconnect(self, websocket: WebSocket, user_id: str = None, match_id: str = None):
+    def disconnect(self, websocket: WebSocket, user_id: str | None = None, match_id: str | None = None):
         # Remove from waiting queue if exists
         self.waiting_queue = [p for p in self.waiting_queue if p["websocket"] != websocket]
         
@@ -28,7 +28,7 @@ class ConnectionManager:
         # This will be handled more specifically in the endpoint loops
         pass
 
-    async def find_match(self, user_id: str, elo_rating: int, websocket: WebSocket) -> str:
+    async def find_match(self, user_id: str, elo_rating: int, websocket: WebSocket) -> str | None:
         """
         Check if another user is in waiting_queue. If yes, create a match.
         Else add current user to queue.
@@ -85,13 +85,39 @@ class ConnectionManager:
 
         await db["users"].update_one({"_id": ObjectId(player_a_id)}, {"$set": {"elo_rating": new_elo_a}})
         await db["users"].update_one({"_id": ObjectId(player_b_id)}, {"$set": {"elo_rating": new_elo_b}})
+        
+        # Determine winner
+        winner_id = None
+        if score_a > score_b:
+            winner_id = player_a_id
+        elif score_b > score_a:
+            winner_id = player_b_id
+        elif reason == "ABANDONED":
+            # If abandoned, the still-connected player wins by default.
+            # Simplified logic: If B abandoned, A wins. 
+            pass
 
-        await self.broadcast_to_match(match_id, {
-            "type": "MATCH_OVER",
-            "reason": reason,
-            "scores": {player_a_id: score_a, player_b_id: score_b},
-            "new_elos": {player_a_id: new_elo_a, player_b_id: new_elo_b}
-        })
+        # Send personalized message to Player A
+        ws_a = match["players"][player_a_id]["websocket"]
+        try:
+             await ws_a.send_json({
+                 "type": "match_over",
+                 "winner_id": winner_id,
+                 "new_elo": new_elo_a,
+                 "xp_gained": 50 if winner_id == player_a_id else 15
+             })
+        except Exception: pass
+        
+        # Send personalized message to Player B
+        ws_b = match["players"][player_b_id]["websocket"]
+        try:
+             await ws_b.send_json({
+                 "type": "match_over",
+                 "winner_id": winner_id,
+                 "new_elo": new_elo_b,
+                 "xp_gained": 50 if winner_id == player_b_id else 15
+             })
+        except Exception: pass
 
         for p_id in player_ids:
             try:
@@ -100,7 +126,7 @@ class ConnectionManager:
                 pass
 
         if match_id in self.active_matches:
-            del self.active_matches[match_id]
+            self.active_matches.pop(match_id, None)
 
     async def broadcast_to_match(self, match_id: str, message: dict):
         if match_id in self.active_matches:

@@ -3,11 +3,11 @@ import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Vault from './pages/Vault';
 import Auth from './pages/Auth';
+import QuizArena from './pages/QuizArena';
+import Arena from './pages/Arena';
+import Mentor from './pages/Mentor';
 
 // Placeholder Pages
-const Quiz = () => <div className="text-2xl font-headline">Quiz Arena</div>;
-const Arena = () => <div className="text-2xl font-headline">Live Arena</div>;
-const Mentor = () => <div className="text-2xl font-headline">AI Mentor</div>;
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('access_token');
@@ -30,7 +30,7 @@ function App() {
         }>
           <Route index element={<Dashboard />} />
           <Route path="vault" element={<Vault />} />
-          <Route path="quiz" element={<Quiz />} />
+          <Route path="quiz" element={<QuizArena />} />
           <Route path="arena" element={<Arena />} />
           <Route path="mentor" element={<Mentor />} />
         </Route>
