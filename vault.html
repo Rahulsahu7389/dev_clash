@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PrepSarthi | Vault &amp; AI Doubt Solver</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-container": "#1bbd85",
+              "outline": "#869397",
+              "inverse-surface": "#dae2fd",
+              "inverse-on-surface": "#283044",
+              "on-background": "#dae2fd",
+              "surface-dim": "#0b1326",
+              "primary-container": "#06b6d4",
+              "surface-tint": "#4cd7f6",
+              "on-tertiary-container": "#00452e",
+              "on-primary-fixed-variant": "#004e5c",
+              "on-primary-fixed": "#001f26",
+              "on-secondary-container": "#d6a9ff",
+              "on-secondary-fixed-variant": "#6900b3",
+              "primary-fixed": "#acedff",
+              "on-tertiary": "#003824",
+              "on-tertiary-fixed-variant": "#005236",
+              "secondary": "#ddb7ff",
+              "on-secondary-fixed": "#2c0051",
+              "on-secondary": "#490080",
+              "tertiary-fixed": "#6ffbbe",
+              "on-error": "#690005",
+              "on-surface-variant": "#bcc9cd",
+              "on-primary": "#003640",
+              "outline-variant": "#3d494c",
+              "surface-variant": "#2d3449",
+              "primary-fixed-dim": "#4cd7f6",
+              "primary": "#4cd7f6",
+              "on-surface": "#dae2fd",
+              "on-error-container": "#ffdad6",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-container-highest": "#2d3449",
+              "tertiary": "#4edea3",
+              "surface-container-low": "#131b2e",
+              "surface": "#0b1326",
+              "surface-container": "#171f33",
+              "surface-container-lowest": "#060e20",
+              "secondary-fixed-dim": "#ddb7ff",
+              "on-primary-container": "#00424f",
+              "surface-container-high": "#222a3d",
+              "error": "#ffb4ab",
+              "surface-bright": "#31394d",
+              "background": "#0b1326",
+              "secondary-container": "#6f00be",
+              "secondary-fixed": "#f0dbff",
+              "on-tertiary-fixed": "#002113",
+              "inverse-primary": "#00687a",
+              "error-container": "#93000a"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3d494c; border-radius: 10px; }
+        .glass-panel {
+            background: rgba(45, 52, 73, 0.6);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#131b2e] dark:bg-slate-900 border-r border-cyan-500/10 shadow-[4px_0_24px_rgba(6,182,212,0.05)] flex flex-col py-6">
+<div class="px-6 mb-8">
+<h1 class="text-2xl font-bold text-cyan-500 tracking-tighter font-headline">PrepSarthi</h1>
+<p class="text-[10px] text-slate-400 font-medium tracking-widest uppercase">Elite Tier</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-300 ease-in-out hover:translate-x-1 hover:bg-slate-800/50" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-cyan-500/10 text-cyan-400 border-r-2 border-cyan-500 font-bold transition-all duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-medium">Vault</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-300 ease-in-out hover:translate-x-1 hover:bg-slate-800/50" href="#">
+<span class="material-symbols-outlined">quiz</span>
+<span class="font-medium">Quiz</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-300 ease-in-out hover:translate-x-1 hover:bg-slate-800/50" href="#">
+<span class="material-symbols-outlined">sports_esports</span>
+<span class="font-medium">Arena</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-300 ease-in-out hover:translate-x-1 hover:bg-slate-800/50" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-medium">Mentor</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full py-3 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-lg font-bold text-sm hover:bg-cyan-500 hover:text-white transition-all">
+                Upgrade to Pro
+            </button>
+</div>
+</aside>
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 right-0 left-64 h-16 z-30 flex justify-between items-center px-8 w-full bg-[#0b1326]/80 backdrop-blur-xl">
+<div class="flex items-center gap-4 bg-surface-container-lowest px-4 py-1.5 rounded-full border border-outline-variant/10 w-96">
+<span class="material-symbols-outlined text-outline text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-outline/50" placeholder="Search resources..." type="text"/>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary transition-colors">military_tech</span>
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary transition-colors">bolt</span>
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary transition-colors">show_chart</span>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/20"></div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="text-right">
+<p class="text-xs font-bold font-headline text-on-surface">Alex Rivera</p>
+<p class="text-[9px] tracking-widest text-primary uppercase">Rank #42</p>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-primary/20 p-0.5 overflow-hidden group-hover:border-primary transition-all">
+<img alt="User Avatar" class="w-full h-full object-cover rounded-full" data-alt="Close up professional headshot of a student" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeFqRuXUtdcv5S3ZTJPSvCLQgPQSFMGpR8Udb2jFvd9jnn-M6ZWRCNqht8fbKls8GJWu8tJoDWHG0NYZXVTzGsJV_P8y_QkKYXdl9xbbcfbzxzsxdcrZ-ZAcG9C4RW6Mzf4nvdTEuQU8y8nHCItridOHrPb4nkri6FWBXr3SCmsp4j8FboU85jmC1kapLbYDcKyK7usN0fq3tA2nR7rI8G4e8C-RDmcn3mYouXszs4nafb1hB9s8kh7VamaF4mjw_mtMwMndqp7zs"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content: The Vault Layout -->
+<main class="ml-64 pt-16 h-screen flex overflow-hidden">
+<!-- Left Pane: Context & Document Management -->
+<section class="w-[420px] h-full bg-surface-container-low flex flex-col border-r border-outline-variant/5">
+<div class="p-6">
+<h2 class="font-headline text-xl font-bold mb-1">Study Vault</h2>
+<p class="text-xs text-on-surface-variant font-medium uppercase tracking-widest mb-6">Contextual Documents</p>
+<!-- Drag & Drop Zone -->
+<div class="border-2 border-dashed border-primary/20 rounded-xl p-8 text-center bg-surface-container-lowest hover:border-primary/40 transition-all cursor-pointer group">
+<span class="material-symbols-outlined text-4xl text-primary/40 group-hover:scale-110 transition-transform mb-3">upload_file</span>
+<p class="text-sm font-semibold">Drop PDF notes here</p>
+<p class="text-[10px] text-on-surface-variant mt-1">Supports OCR &amp; Equation Parsing</p>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto px-6 pb-6 space-y-4">
+<h3 class="text-[10px] font-bold text-outline uppercase tracking-widest">Active Sources (4)</h3>
+<!-- Document List Items -->
+<div class="bg-surface-container-high p-4 rounded-xl flex items-center gap-4 group cursor-pointer hover:bg-surface-container-highest transition-colors">
+<div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold truncate">Advanced_Calculus_Lec3.pdf</p>
+<p class="text-[10px] text-on-surface-variant">12 Pages • Annotated</p>
+</div>
+<span class="material-symbols-outlined text-outline opacity-0 group-hover:opacity-100 transition-opacity">more_vert</span>
+</div>
+<div class="bg-surface-container-high p-4 rounded-xl flex items-center gap-4 group cursor-pointer hover:bg-surface-container-highest transition-colors">
+<div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold truncate">Quantum_Mechanics_Summary</p>
+<p class="text-[10px] text-on-surface-variant">Shared by Mentor • 3 mins ago</p>
+</div>
+<span class="material-symbols-outlined text-outline opacity-0 group-hover:opacity-100 transition-opacity">more_vert</span>
+</div>
+<div class="bg-surface-container-high p-4 rounded-xl flex items-center gap-4 group cursor-pointer hover:bg-surface-container-highest transition-colors">
+<div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+<span class="material-symbols-outlined">video_library</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold truncate">Electrostatics_Video_Transcript</p>
+<p class="text-[10px] text-on-surface-variant">Auto-generated • Dec 12</p>
+</div>
+<span class="material-symbols-outlined text-outline opacity-0 group-hover:opacity-100 transition-opacity">more_vert</span>
+</div>
+<!-- Recessed "Empty State" Logic Hint -->
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/10 text-center py-8">
+<span class="material-symbols-outlined text-outline/30 text-3xl mb-2">add_circle</span>
+<p class="text-[11px] text-on-surface-variant">Link more context to improve AI precision</p>
+</div>
+</div>
+</section>
+<!-- Right Pane: The Sophisticated Chat UI -->
+<section class="flex-1 flex flex-col bg-surface relative overflow-hidden">
+<!-- Chat Header -->
+<div class="h-16 px-8 border-b border-outline-variant/5 flex items-center justify-between glass-panel z-10">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-secondary animate-pulse"></div>
+<h2 class="font-headline font-semibold text-sm">Doubt Solver AI <span class="text-secondary font-normal text-[10px] ml-2 px-1.5 py-0.5 rounded border border-secondary/30 bg-secondary/10">v4.2 PRO</span></h2>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg hover:bg-surface-container-high text-outline transition-colors"><span class="material-symbols-outlined text-lg">history</span></button>
+<button class="p-2 rounded-lg hover:bg-surface-container-high text-outline transition-colors"><span class="material-symbols-outlined text-lg">settings</span></button>
+</div>
+</div>
+<!-- Chat Message Thread -->
+<div class="flex-1 overflow-y-auto p-8 space-y-8 pb-32">
+<!-- User Message -->
+<div class="flex justify-end items-start gap-4">
+<div class="max-w-[70%] bg-surface-container-high p-4 rounded-2xl rounded-tr-none text-sm leading-relaxed">
+                        Can you explain the derivation of the Schrödinger equation from these notes? I'm specifically struggling with the Hamiltonian operator section on page 4.
+                    </div>
+<div class="w-8 h-8 rounded-full bg-primary/20 flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">person</span>
+</div>
+</div>
+<!-- AI Response Bubble (Insight Bubble Pattern) -->
+<div class="flex items-start gap-4">
+<div class="w-8 h-8 rounded-full bg-secondary/20 flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;">psychology</span>
+</div>
+<div class="max-w-[85%] space-y-4">
+<div class="glass-panel border-l-2 border-secondary p-5 rounded-2xl rounded-tl-none text-sm leading-relaxed text-on-surface">
+<p class="mb-4">Based on your Lec3 PDF, the Schrödinger equation derivation focuses on the conservation of energy principle. Here is the mathematical breakdown for the Hamiltonian Operator ($\hat{H}$):</p>
+<!-- Math/Markdown Component -->
+<div class="bg-surface-container-lowest p-4 rounded-lg font-mono text-secondary mb-4 border border-secondary/10">
+                                $\hat{H}\Psi = E\Psi$ <br/>
+                                Where $\hat{H} = -\frac{\hbar^2}{2m}\nabla^2 + V(\mathbf{r},t)$
+                            </div>
+<p class="mb-6">The operator represents the sum of kinetic and potential energy. I've found a relevant video snippet that visualizes the operator's effect on wave functions:</p>
+<!-- Video Embed Component -->
+<div class="aspect-video rounded-xl overflow-hidden bg-black border border-outline-variant/20 shadow-lg mb-4">
+<iframe allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="" class="w-full h-full" frameborder="0" src="https://www.youtube.com/embed/dQw4w9WgXcQ?controls=0" title="Concept Explanation"></iframe>
+</div>
+<div class="flex items-center gap-2 mt-4">
+<button class="flex items-center gap-1.5 text-[10px] font-bold text-secondary uppercase tracking-widest px-3 py-1.5 rounded-full border border-secondary/20 hover:bg-secondary/10 transition-colors">
+<span class="material-symbols-outlined text-xs">bookmark</span> Save to Notebook
+                                </button>
+<button class="flex items-center gap-1.5 text-[10px] font-bold text-tertiary uppercase tracking-widest px-3 py-1.5 rounded-full border border-tertiary/20 hover:bg-tertiary/10 transition-colors">
+<span class="material-symbols-outlined text-xs">thumb_up</span> Correct
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Input Area: The Command Center -->
+<div class="absolute bottom-0 left-0 right-0 p-8 pt-0">
+<div class="max-w-4xl mx-auto glass-panel p-2 rounded-2xl border border-outline-variant/10 shadow-2xl">
+<div class="relative flex items-end gap-2 bg-surface-container-lowest rounded-xl p-2">
+<button class="p-2.5 rounded-lg text-outline hover:text-primary hover:bg-primary/5 transition-all">
+<span class="material-symbols-outlined">attach_file</span>
+</button>
+<button class="p-2.5 rounded-lg text-outline hover:text-primary hover:bg-primary/5 transition-all">
+<span class="material-symbols-outlined">mic</span>
+</button>
+<textarea class="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2.5 px-2 resize-none placeholder:text-outline/40" placeholder="Ask from notes..." rows="1"></textarea>
+<button class="bg-primary hover:bg-primary-container text-on-primary p-2.5 rounded-lg flex items-center justify-center transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+<div class="flex items-center gap-4 px-3 py-2">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="text-[10px] text-secondary font-bold uppercase tracking-wider">Deep Analysis Mode</span>
+</div>
+<div class="h-3 w-[1px] bg-outline-variant/20"></div>
+<span class="text-[10px] text-on-surface-variant">Press <kbd class="px-1 py-0.5 rounded bg-surface-container-high border border-outline-variant/20">Cmd + K</kbd> for shortcuts</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Floating AI Bubble (Contextual suppression check: This is Vault, primary screen, show FAB) -->
+<div class="fixed bottom-6 right-6 z-50">
+<button class="w-14 h-14 bg-gradient-to-br from-primary to-primary-container rounded-full flex items-center justify-center text-on-primary shadow-xl shadow-primary/30 hover:scale-110 active:scale-95 transition-all group">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<div class="absolute right-16 px-4 py-2 bg-surface-container-highest rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold border border-primary/20 pointer-events-none">
+                Quick Summary
+            </div>
+</button>
+</div>
+</body></html>

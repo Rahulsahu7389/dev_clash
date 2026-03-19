@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PrepSarthi Dashboard | Elite Tier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-container": "#1bbd85",
+                        "outline": "#869397",
+                        "inverse-surface": "#dae2fd",
+                        "inverse-on-surface": "#283044",
+                        "on-background": "#dae2fd",
+                        "surface-dim": "#0b1326",
+                        "primary-container": "#06b6d4",
+                        "surface-tint": "#4cd7f6",
+                        "on-tertiary-container": "#00452e",
+                        "on-primary-fixed-variant": "#004e5c",
+                        "on-primary-fixed": "#001f26",
+                        "on-secondary-container": "#d6a9ff",
+                        "on-secondary-fixed-variant": "#6900b3",
+                        "primary-fixed": "#acedff",
+                        "on-tertiary": "#003824",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "secondary": "#ddb7ff",
+                        "on-secondary-fixed": "#2c0051",
+                        "on-secondary": "#490080",
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-error": "#690005",
+                        "on-surface-variant": "#bcc9cd",
+                        "on-primary": "#003640",
+                        "outline-variant": "#3d494c",
+                        "surface-variant": "#2d3449",
+                        "primary-fixed-dim": "#4cd7f6",
+                        "primary": "#4cd7f6",
+                        "on-surface": "#dae2fd",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-container-highest": "#2d3449",
+                        "tertiary": "#4edea3",
+                        "surface-container-low": "#131b2e",
+                        "surface": "#0b1326",
+                        "surface-container": "#171f33",
+                        "surface-container-lowest": "#060e20",
+                        "secondary-fixed-dim": "#ddb7ff",
+                        "on-primary-container": "#00424f",
+                        "surface-container-high": "#222a3d",
+                        "error": "#ffb4ab",
+                        "surface-bright": "#31394d",
+                        "background": "#0b1326",
+                        "secondary-container": "#6f00be",
+                        "secondary-fixed": "#f0dbff",
+                        "on-tertiary-fixed": "#002113",
+                        "inverse-primary": "#00687a",
+                        "error-container": "#93000a"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .heatmap-cell {
+            aspect-ratio: 1/1;
+            width: 12px;
+            border-radius: 2px;
+        }
+        .glass-card {
+            background: rgba(45, 52, 73, 0.6);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar Anchor -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#131b2e] border-r border-cyan-500/10 shadow-[4px_0_24px_rgba(6,182,212,0.05)] flex flex-col py-6">
+<div class="px-6 mb-10">
+<h1 class="text-2xl font-bold text-cyan-500 tracking-tighter font-headline">PrepSarthi</h1>
+<p class="text-[10px] tracking-widest uppercase text-slate-500 font-label mt-1">Elite Tier</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active State: Dashboard -->
+<a class="flex items-center gap-3 px-4 py-3 bg-cyan-500/10 text-cyan-400 border-r-2 border-cyan-500 font-bold transition-all duration-300 ease-in-out hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-headline text-lg">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors transition-all duration-300 ease-in-out hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-headline text-lg">Vault</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors transition-all duration-300 ease-in-out hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="quiz">quiz</span>
+<span class="font-headline text-lg">Quiz</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors transition-all duration-300 ease-in-out hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="sports_esports">sports_esports</span>
+<span class="font-headline text-lg">Arena</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-colors transition-all duration-300 ease-in-out hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="font-headline text-lg">Mentor</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full py-3 px-4 bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
+                Upgrade to Pro
+            </button>
+<div class="mt-6 flex items-center gap-3 px-2">
+<img alt="User Profile Avatar" class="w-10 h-10 rounded-full bg-surface-container-high" data-alt="User profile avatar with glowing border" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdJ3dOcKznXez6bRdiVao2KA8G_wyIdA8zj3Wymmk4t1kU5XXNfftoSGTitTXavljB036NZXUTX8j9YIeMzsHaLsFh_CNDXtYSpWdFDzgeXud9Kvqt-dALN9t6SgDACdAskX2ErDStGDVFQHv7iAx5oiMwK_abWpPq5_Mj8-5ugmz7qKbNeO5LqOJII5CqPTGWZgv3T7KMyGV1cBoID3ntc_qNeGsmp2qROCvrVIMCN8bfjNhTtNmom-I_eadtJPhfwtRbJTW4J4c"/>
+<div class="overflow-hidden">
+<p class="text-sm font-bold truncate">Alex Chen</p>
+<p class="text-[10px] text-slate-500 uppercase tracking-tighter">Rank #422</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Anchor -->
+<header class="fixed top-0 right-0 left-64 h-16 z-30 bg-[#0b1326]/80 backdrop-blur-xl flex justify-between items-center px-8 w-full">
+<div class="flex items-center gap-4 bg-surface-container-lowest px-4 py-1.5 rounded-full border border-outline-variant/20 w-96">
+<span class="material-symbols-outlined text-outline text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-outline/50" placeholder="Search topics, modules..." type="text"/>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="relative text-slate-400 hover:text-cyan-400 transition-all scale-95 active:scale-90">
+<span class="material-symbols-outlined" data-icon="military_tech">military_tech</span>
+</button>
+<button class="relative text-slate-400 hover:text-cyan-400 transition-all scale-95 active:scale-90">
+<span class="material-symbols-outlined" data-icon="bolt" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="absolute -top-1 -right-1 flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+</span>
+</button>
+<button class="relative text-slate-400 hover:text-cyan-400 transition-all scale-95 active:scale-90">
+<span class="material-symbols-outlined" data-icon="ShowChart">show_chart</span>
+</button>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/20"></div>
+<button class="flex items-center gap-2 text-slate-400 font-medium font-label text-[10px] tracking-widest uppercase hover:text-cyan-200 transition-all">
+                Profile
+                <img alt="User Avatar" class="w-8 h-8 rounded-lg bg-surface-container-high" data-alt="User avatar thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBq5vJkUsIxgvl0KfqNOpArkxpSUTRJWSUdGKsv_yEQcbKzK-MOtaGRxm4EZxbIUReM1A-d7Hgmo44VcCFubLjM-Z7f0Mi-waf8Rse0NWwuzesvyVc-5xCjF7DpM0crT7YgLp8WPIyqBq2a9PALCzPXJEPAhOACnP8RFwLMwMvIZEZxmERiL2fCsbkN_BDgzI4X4Z2mP3TSNy0FK7_AYHV0O6-p1AWjL1jJl6q4ibl3w7tM0ONdH1Npb5Y-5vk6mMtpgckCgjTIqyo"/>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-24 pb-12 px-8 min-h-screen">
+<!-- Top Banner / Hero -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+<div class="lg:col-span-2 bg-surface-container-low p-8 rounded-xl relative overflow-hidden flex flex-col justify-between">
+<div class="relative z-10">
+<h2 class="font-headline text-4xl font-bold tracking-tight mb-2">Welcome back, Alex.</h2>
+<p class="text-on-surface-variant flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+                        Your focus score is 12% higher than yesterday.
+                    </p>
+</div>
+<div class="mt-8 flex gap-8 items-end relative z-10">
+<div>
+<p class="text-[10px] font-label tracking-widest text-slate-500 uppercase mb-1">Current Rank</p>
+<div class="flex items-center gap-3">
+<div class="p-3 bg-primary/10 rounded-xl border border-primary/20 shadow-[0_0_15px_rgba(76,215,246,0.2)]">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<div>
+<p class="font-headline text-2xl font-bold">Scholar</p>
+<p class="text-xs text-primary">Top 4% Overall</p>
+</div>
+</div>
+</div>
+<div class="h-12 w-[1px] bg-outline-variant/30 mb-1"></div>
+<div>
+<p class="text-[10px] font-label tracking-widest text-slate-500 uppercase mb-1">Total Experience</p>
+<p class="font-headline text-3xl font-bold">14,280 <span class="text-sm text-slate-500 font-body">XP</span></p>
+</div>
+</div>
+<!-- Abstract Decorative Element -->
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] -mr-32 -mt-32"></div>
+</div>
+<!-- Hero Widget (The Hook) -->
+<div class="bg-surface-container-high rounded-xl p-1 flex flex-col">
+<div class="flex-1 bg-surface-container-lowest rounded-lg p-6 flex flex-col items-center justify-center text-center border border-primary/20 shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]">
+<div class="mb-4 p-4 rounded-full bg-primary/10">
+<span class="material-symbols-outlined text-primary scale-150" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<button class="font-headline text-xl font-bold text-on-primary bg-gradient-to-br from-primary to-primary-container px-8 py-4 rounded-xl shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:scale-105 transition-transform mb-4">
+                        Start Daily Revision
+                    </button>
+<p class="text-sm text-on-surface-variant max-w-[200px]">
+<span class="text-error font-bold">5 topics</span> are about to fade from your memory.
+                    </p>
+</div>
+</div>
+</div>
+<!-- Bento Grid Main -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Consistency Grid (GitHub Style) -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-low p-6 rounded-xl">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline text-lg font-bold">Consistency Pulse</h3>
+<div class="flex items-center gap-2 text-[10px] font-label tracking-widest text-slate-500 uppercase">
+<span>Less</span>
+<div class="flex gap-1">
+<div class="heatmap-cell bg-surface-container-high"></div>
+<div class="heatmap-cell bg-tertiary/20"></div>
+<div class="heatmap-cell bg-tertiary/40"></div>
+<div class="heatmap-cell bg-tertiary/70"></div>
+<div class="heatmap-cell bg-tertiary"></div>
+</div>
+<span>More</span>
+</div>
+</div>
+<div class="flex gap-1 overflow-x-auto pb-2">
+<!-- Simple Heatmap Mockup (30 columns for 30 days) -->
+<div class="grid grid-rows-7 gap-1 flex-shrink-0">
+<!-- Column 1-30 -->
+<div class="heatmap-cell bg-tertiary/60"></div><div class="heatmap-cell bg-tertiary/20"></div><div class="heatmap-cell bg-tertiary/80"></div><div class="heatmap-cell bg-surface-container-high"></div><div class="heatmap-cell bg-tertiary/40"></div><div class="heatmap-cell bg-tertiary/90"></div><div class="heatmap-cell bg-tertiary"></div>
+</div>
+<!-- Repeat for visual representation -->
+<div class="grid grid-rows-7 gap-1 flex-shrink-0"><div class="heatmap-cell bg-tertiary/30"></div><div class="heatmap-cell bg-tertiary"></div><div class="heatmap-cell bg-tertiary/40"></div><div class="heatmap-cell bg-tertiary/60"></div><div class="heatmap-cell bg-tertiary/20"></div><div class="heatmap-cell bg-tertiary/80"></div><div class="heatmap-cell bg-surface-container-high"></div></div>
+<div class="grid grid-rows-7 gap-1 flex-shrink-0"><div class="heatmap-cell bg-tertiary/40"></div><div class="heatmap-cell bg-tertiary/90"></div><div class="heatmap-cell bg-tertiary"></div><div class="heatmap-cell bg-tertiary/30"></div><div class="heatmap-cell bg-tertiary"></div><div class="heatmap-cell bg-tertiary/40"></div><div class="heatmap-cell bg-tertiary/60"></div></div>
+<div class="grid grid-rows-7 gap-1 flex-shrink-0"><div class="heatmap-cell bg-tertiary/20"></div><div class="heatmap-cell bg-tertiary/80"></div><div class="heatmap-cell bg-surface-container-high"></div><div class="heatmap-cell bg-tertiary/40"></div><div class="heatmap-cell bg-tertiary/90"></div><div class="heatmap-cell bg-tertiary"></div><div class="heatmap-cell bg-tertiary/30"></div></div>
+<div class="grid grid-rows-7 gap-1 flex-shrink-0"><div class="heatmap-cell bg-tertiary"></div><div class="heatmap-cell bg-tertiary/40"></div><div class="heatmap-cell bg-tertiary/60"></div><div class="heatmap-cell bg-tertiary/20"></div><div class="heatmap-cell bg-tertiary/80"></div><div class="heatmap-cell bg-surface-container-high"></div><div class="heatmap-cell bg-tertiary/40"></div></div>
+<div class="grid grid-rows-7 gap-1 flex-shrink-0"><div class="heatmap-cell bg-tertiary/90"></div><div class="heatmap-cell bg-tertiary"></div><div class="heatmap-cell bg-tertiary/30"></div><div class="heatmap-cell bg-tertiary"></div><div class="heatmap-cell bg-tertiary/40"></div><div class="heatmap-cell bg-tertiary/60"></div><div class="heatmap-cell bg-tertiary/20"></div></div>
+<div class="grid grid-rows-7 gap-1 flex-shrink-0"><div class="heatmap-cell bg-tertiary/80"></div><div class="heatmap-cell bg-surface-container-high"></div><div class="heatmap-cell bg-tertiary/40"></div><div class="heatmap-cell bg-tertiary/90"></div><div class="heatmap-cell bg-tertiary"></div><div class="heatmap-cell bg-tertiary/30"></div><div class="heatmap-cell bg-tertiary"></div></div>
+</div>
+<div class="mt-4 pt-4 border-t border-outline-variant/10 flex justify-between">
+<div class="text-sm text-on-surface-variant">
+                        Max Streak: <span class="text-tertiary font-bold">14 Days</span>
+</div>
+<div class="text-sm text-on-surface-variant">
+                        Last 30 Days: <span class="text-on-surface font-bold">4,120 XP</span>
+</div>
+</div>
+</div>
+<!-- Weakest Topics Radar Chart Mockup -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container-high p-6 rounded-xl flex flex-col">
+<h3 class="font-headline text-lg font-bold mb-6">Targeted Mastery</h3>
+<div class="relative flex-1 flex items-center justify-center">
+<!-- Abstract SVG Radar Chart -->
+<svg class="w-full max-w-[200px] h-auto drop-shadow-[0_0_10px_rgba(221,183,255,0.1)]" viewbox="0 0 100 100">
+<!-- Grid Lines -->
+<circle class="text-outline-variant/20" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-width="0.5"></circle>
+<circle class="text-outline-variant/20" cx="50" cy="50" fill="none" r="30" stroke="currentColor" stroke-width="0.5"></circle>
+<circle class="text-outline-variant/20" cx="50" cy="50" fill="none" r="15" stroke="currentColor" stroke-width="0.5"></circle>
+<!-- Data Shape -->
+<path d="M50 15 L80 40 L70 75 L30 75 L20 40 Z" fill="rgba(221,183,255,0.2)" stroke="#ddb7ff" stroke-width="1"></path>
+<!-- Vertex labels pointers (Visual only) -->
+<line class="text-outline-variant/20" stroke="currentColor" stroke-width="0.5" x1="50" x2="50" y1="50" y2="5"></line>
+<line class="text-outline-variant/20" stroke="currentColor" stroke-width="0.5" x1="50" x2="95" y1="50" y2="40"></line>
+<line class="text-outline-variant/20" stroke="currentColor" stroke-width="0.5" x1="50" x2="75" y1="50" y2="90"></line>
+<line class="text-outline-variant/20" stroke="currentColor" stroke-width="0.5" x1="50" x2="25" y1="50" y2="90"></line>
+<line class="text-outline-variant/20" stroke="currentColor" stroke-width="0.5" x1="50" x2="5" y1="50" y2="40"></line>
+</svg>
+<!-- Insight Bubble Overlay -->
+<div class="absolute bottom-0 left-0 right-0 glass-card p-3 rounded-lg border-l-2 border-secondary">
+<p class="text-[10px] font-label text-secondary mb-1">AI INSIGHT</p>
+<p class="text-xs text-on-surface leading-tight">Your <b>Quantitative Aptitude</b> has dropped by 8% this week. Suggest a 15min focus session.</p>
+</div>
+</div>
+</div>
+<!-- Detailed Stats / Activity Feed -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-high rounded-xl overflow-hidden">
+<div class="px-6 py-4 border-b border-outline-variant/10 flex justify-between items-center">
+<h3 class="font-headline text-lg font-bold">Activity Feed</h3>
+<button class="text-xs text-primary font-bold hover:underline">View All</button>
+</div>
+<div class="p-6 space-y-6">
+<!-- Activity Item -->
+<div class="flex gap-4 group">
+<div class="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center text-primary border border-outline-variant/20 group-hover:border-primary/50 transition-colors">
+<span class="material-symbols-outlined">verified</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-sm font-bold">Mock Exam Completed</p>
+<span class="text-[10px] text-slate-500 font-label">2H AGO</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-1">Advanced Physics - Section 4. Score: 92/100</p>
+</div>
+</div>
+<!-- Activity Item -->
+<div class="flex gap-4 group">
+<div class="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center text-secondary border border-outline-variant/20 group-hover:border-secondary/50 transition-colors">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-sm font-bold">New Concept Unlocked</p>
+<span class="text-[10px] text-slate-500 font-label">5H AGO</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-1">Neural Networks &amp; Deep Learning Essentials</p>
+</div>
+</div>
+<!-- Activity Item -->
+<div class="flex gap-4 group">
+<div class="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center text-tertiary border border-outline-variant/20 group-hover:border-tertiary/50 transition-colors">
+<span class="material-symbols-outlined">military_tech</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-sm font-bold">Weekly Rank Up</p>
+<span class="text-[10px] text-slate-500 font-label">YESTERDAY</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-1">Promoted to Elite Tier (Top 500 Global)</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Weakest Topics List -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<div class="bg-surface-container-low p-6 rounded-xl">
+<h3 class="font-headline text-lg font-bold mb-4">Urgent Review</h3>
+<div class="space-y-4">
+<div class="p-4 bg-surface-container-lowest rounded-lg border-l-2 border-error/50">
+<div class="flex justify-between items-center mb-1">
+<span class="text-sm font-bold">Organic Chemistry</span>
+<span class="text-error text-[10px] font-bold">Low Retent.</span>
+</div>
+<div class="w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
+<div class="bg-error h-full w-[22%]"></div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-lowest rounded-lg border-l-2 border-error/50">
+<div class="flex justify-between items-center mb-1">
+<span class="text-sm font-bold">Complex Variables</span>
+<span class="text-error text-[10px] font-bold">Fading</span>
+</div>
+<div class="w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
+<div class="bg-error h-full w-[35%]"></div>
+</div>
+</div>
+</div>
+<button class="w-full mt-4 py-2 text-xs font-bold text-on-surface-variant border border-outline-variant/20 rounded-lg hover:bg-surface-container-high transition-colors">
+                        Analyze Weaknesses
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Global Visual Floating Notification (Simulated) -->
+<div class="fixed bottom-6 right-6 z-50 glass-card p-4 rounded-xl border border-primary/20 shadow-2xl flex items-center gap-4 max-w-sm">
+<div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">psychology</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Study Session Invite</p>
+<p class="text-xs text-on-surface-variant">Saurav is studying <b>Fluid Mechanics</b>. Join the arena?</p>
+<div class="flex gap-2 mt-2">
+<button class="px-3 py-1 bg-primary text-on-primary text-[10px] font-bold rounded-md">Join Now</button>
+<button class="px-3 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-bold rounded-md">Later</button>
+</div>
+</div>
+</div>
+</body></html>
