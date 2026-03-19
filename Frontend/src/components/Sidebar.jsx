@@ -12,10 +12,10 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="h-screen w-64 fixed left-0 top-0 z-40 bg-[#131b2e] border-r border-cyan-500/10 shadow-[4px_0_24px_rgba(6,182,212,0.05)] flex flex-col py-6">
+    <aside className="h-screen w-64 fixed left-0 top-0 z-40 bg-surface-container-low border-r border-primary/10 shadow-[4px_0_24px_rgba(var(--primary),0.05)] flex flex-col py-6">
       <div className="px-6 mb-10">
-        <h1 className="text-2xl font-bold text-cyan-500 tracking-tighter font-headline">PrepSarthi</h1>
-        <p className="text-[10px] tracking-widest uppercase text-slate-500 font-label mt-1">Elite Tier</p>
+        <h1 className="text-2xl font-bold text-primary tracking-tighter font-headline">PrepSarthi</h1>
+        <p className="text-[10px] tracking-widest uppercase text-on-surface-variant font-label mt-1">Elite Tier</p>
       </div>
 
       <nav className="flex-1 space-y-1">
@@ -27,8 +27,8 @@ export default function Sidebar() {
               to={item.path}
               className={`flex items-center gap-3 px-4 py-3 transition-all duration-300 ease-in-out hover:translate-x-1 ${
                 isActive 
-                  ? 'bg-cyan-500/10 text-cyan-400 border-r-2 border-cyan-500 font-bold' 
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-primary/10 text-primary border-r-2 border-primary font-bold' 
+                  : 'text-outline hover:text-on-surface'
               }`}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
@@ -45,8 +45,13 @@ export default function Sidebar() {
         <div className="mt-6 flex items-center gap-3 px-2">
           <img alt="User Profile Avatar" className="w-10 h-10 rounded-full bg-surface-container-high border border-cyan-500/30" src={location.pathname === '/mentor' ? "https://api.dicebear.com/7.x/avataaars/svg?seed=Aris" : "https://lh3.googleusercontent.com/aida-public/AB6AXuAdJ3dOcKznXez6bRdiVao2KA8G_wyIdA8zj3Wymmk4t1kU5XXNfftoSGTitTXavljB036NZXUTX8j9YIeMzsHaLsFh_CNDXtYSpWdFDzgeXud9Kvqt-dALN9t6SgDACdAskX2ErDStGDVFQHv7iAx5oiMwK_abWpPq5_Mj8-5ugmz7qKbNeO5LqOJII5CqPTGWZgv3T7KMyGV1cBoID3ntc_qNeGsmp2qROCvrVIMCN8bfjNhTtNmom-I_eadtJPhfwtRbJTW4J4c"} />
           <div className="overflow-hidden">
+<<<<<<< HEAD
             <p className="text-sm font-bold truncate">{location.pathname === '/mentor' ? 'Dr. Aris Thorne' : 'Alex Chen'}</p>
             <p className="text-[10px] text-slate-500 uppercase tracking-tighter">{location.pathname === '/mentor' ? 'Senior Lead Mentor' : 'Rank #422'}</p>
+=======
+            <p className="text-sm font-bold truncate">Alex Chen</p>
+            <p className="text-[10px] text-on-surface-variant uppercase tracking-tighter">Rank #422</p>
+>>>>>>> origin
           </div>
         </div>
       </div>
