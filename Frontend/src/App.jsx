@@ -2,15 +2,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Vault from './pages/Vault';
-// import Mentor from './pages/Mentor';
 import Auth from './pages/Auth';
 import QuizArena from './pages/QuizArena';
 import Arena from './pages/Arena';
 import Mentor from './pages/Mentor';
-
-// Placeholder Pages
-const Quiz = () => <div className="text-2xl font-headline text-white">Quiz Arena (Ongoing Simulation)</div>;
-const Arena = () => <div className="text-2xl font-headline text-white">Live Battle Arena</div>;
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('access_token');
@@ -37,7 +32,7 @@ function App() {
           <Route path="arena" element={<Arena />} />
           <Route path="mentor" element={<Mentor />} />
         </Route>
-        
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
