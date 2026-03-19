@@ -20,7 +20,7 @@ export default function Vault() {
 
           {/* Document List Items */}
           <div className="bg-surface-container-high p-4 rounded-xl flex items-center gap-4 group cursor-pointer hover:bg-surface-container-highest transition-colors">
-            <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400">
+            <div className="w-10 h-10 rounded-lg bg-error/10 flex items-center justify-center text-error">
               <span className="material-symbols-outlined">picture_as_pdf</span>
             </div>
             <div className="flex-1 min-w-0">
@@ -31,7 +31,7 @@ export default function Vault() {
           </div>
 
           <div className="bg-surface-container-high p-4 rounded-xl flex items-center gap-4 group cursor-pointer hover:bg-surface-container-highest transition-colors">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
               <span className="material-symbols-outlined">description</span>
             </div>
             <div className="flex-1 min-w-0">
@@ -42,7 +42,7 @@ export default function Vault() {
           </div>
 
           <div className="bg-surface-container-high p-4 rounded-xl flex items-center gap-4 group cursor-pointer hover:bg-surface-container-highest transition-colors">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+            <div className="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
               <span className="material-symbols-outlined">video_library</span>
             </div>
             <div className="flex-1 min-w-0">

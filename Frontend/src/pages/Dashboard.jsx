@@ -15,7 +15,7 @@ export default function Dashboard() {
           </div>
           <div className="mt-8 flex gap-8 items-end relative z-10">
             <div>
-              <p className="text-[10px] font-label tracking-widest text-slate-500 uppercase mb-1">Current Rank</p>
+              <p className="text-[10px] font-label tracking-widest text-on-surface-variant uppercase mb-1">Current Rank</p>
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 shadow-[0_0_15px_rgba(76,215,246,0.2)]">
                   <span className="material-symbols-outlined text-primary text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
@@ -28,8 +28,8 @@ export default function Dashboard() {
             </div>
             <div className="h-12 w-[1px] bg-outline-variant/30 mb-1"></div>
             <div>
-              <p className="text-[10px] font-label tracking-widest text-slate-500 uppercase mb-1">Total Experience</p>
-              <p className="font-headline text-3xl font-bold">14,280 <span className="text-sm text-slate-500 font-body">XP</span></p>
+              <p className="text-[10px] font-label tracking-widest text-on-surface-variant uppercase mb-1">Total Experience</p>
+              <p className="font-headline text-3xl font-bold">14,280 <span className="text-sm text-on-surface-variant font-body">XP</span></p>
             </div>
           </div>
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] -mr-32 -mt-32"></div>
@@ -37,11 +37,11 @@ export default function Dashboard() {
 
         {/* Hero Widget (The Hook) */}
         <div className="bg-surface-container-high rounded-xl p-1 flex flex-col">
-          <div className="flex-1 bg-surface-container-lowest rounded-lg p-6 flex flex-col items-center justify-center text-center border border-primary/20 shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]">
+          <div className="flex-1 bg-surface-container-lowest rounded-lg p-6 flex flex-col items-center justify-center text-center border border-primary/20 shadow-[inset_0_0_20px_rgba(var(--primary),0.05)]">
             <div className="mb-4 p-4 rounded-full bg-primary/10">
               <span className="material-symbols-outlined text-primary scale-150" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
             </div>
-            <Link to="/quiz" className="font-headline text-xl font-bold text-on-primary bg-gradient-to-br from-primary to-primary-container px-8 py-4 rounded-xl shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:scale-105 transition-transform mb-4 inline-block">
+            <Link to="/quiz" className="font-headline text-xl font-bold text-on-primary bg-gradient-to-br from-primary to-primary-container px-8 py-4 rounded-xl shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:scale-105 transition-transform mb-4 inline-block">
               Start Daily Revision
             </Link>
             <p className="text-sm text-on-surface-variant max-w-[200px]">
@@ -57,7 +57,7 @@ export default function Dashboard() {
         <div className="col-span-12 lg:col-span-8 bg-surface-container-low p-6 rounded-xl">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-headline text-lg font-bold">Consistency Pulse</h3>
-            <div className="flex items-center gap-2 text-[10px] font-label tracking-widest text-slate-500 uppercase">
+            <div className="flex items-center gap-2 text-[10px] font-label tracking-widest text-on-surface-variant uppercase">
               <span>Less</span>
               <div className="flex gap-1">
                 <div className="heatmap-cell bg-surface-container-high"></div>
@@ -132,7 +132,7 @@ export default function Dashboard() {
               <div className="flex-1">
                 <div className="flex justify-between items-start">
                   <p className="text-sm font-bold">Mock Exam Completed</p>
-                  <span className="text-[10px] text-slate-500 font-label">2H AGO</span>
+                  <span className="text-[10px] text-on-surface-variant font-label">2H AGO</span>
                 </div>
                 <p className="text-xs text-on-surface-variant mt-1">Advanced Physics - Section 4. Score: 92/100</p>
               </div>

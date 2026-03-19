@@ -3,6 +3,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.models.user import UserCreate, Token
 from app.core.database import get_database
 from app.core.security import hash_password, verify_password, create_access_token
+from app.core.dependencies import get_current_user
+from bson import ObjectId
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -48,3 +50,18 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         data={"sub": str(user["_id"]), "role": user["role"]}
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    db = get_database()
+    user = await db.users.find_one({"_id": ObjectId(current_user["user_id"])})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "username": user.get("username", "Student"),
+        "email": user.get("email"),
+        "role": user.get("role", "student"),
+        "elo_rating": user.get("elo_rating", 1200),
+        "total_xp": user.get("total_xp", 0)
+    }
+
