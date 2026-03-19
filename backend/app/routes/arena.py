@@ -52,6 +52,8 @@ async def websocket_battle(
 ):
     await websocket.accept()
     
+    db = get_database()
+    
     if match_id not in manager.active_matches:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
@@ -94,7 +96,7 @@ async def websocket_battle(
 
     try:
         while True:
-            data = await websocket.receive_json()
+            data = await asyncio.wait_for(websocket.receive_json(), timeout=60.0)
             if data.get("type") == "ANSWER_SUBMITTED":
                 is_correct = data.get("is_correct", False)
                 if is_correct:
@@ -115,76 +117,13 @@ async def websocket_battle(
                     match["players"][user_id]["completed"] = True
                     
                 # Check if both finished
-                if all(p["completed"] for p in match["players"].values()):
-                    await handle_endgame(match_id)
+                if manager.check_match_complete(match_id):
+                    await manager.trigger_endgame(match_id, db, "NORMAL")
                     break
                     
+    except asyncio.TimeoutError:
+        logger.info(f"Match {match_id} timeout.")
+        await manager.trigger_endgame(match_id, db, "TIMEOUT")
     except WebSocketDisconnect:
-        # Handle disconnect during battle
         logger.info(f"User {user_id} disconnected from match {match_id}")
-        # In a real game, the other player might win by forfeit.
-        if match_id in manager.active_matches:
-            # Notify opponent
-            for p_id in match["players"]:
-                if p_id != user_id:
-                    try:
-                        await match["players"][p_id]["websocket"].send_json({
-                            "type": "OPPONENT_DISCONNECTED",
-                            "message": "Your opponent left the arena."
-                        })
-                    except Exception:
-                        pass
-            # Cleanup
-            if match_id in manager.active_matches:
-                del manager.active_matches[match_id]
-
-async def handle_endgame(match_id: str):
-    match = manager.active_matches[match_id]
-    player_ids = list(match["players"].keys())
-    p1_id, p2_id = player_ids[0], player_ids[1]
-    
-    p1_data = match["players"][p1_id]
-    p2_data = match["players"][p2_id]
-    
-    new_elo_p1, new_elo_p2 = calculate_new_elos(
-        p1_data["elo"], p2_data["elo"],
-        p1_data["score"], p2_data["score"]
-    )
-    
-    db = get_database()
-    
-    # Update MongoDB for both players
-    for p_id, new_elo, score, opponent_score in [
-        (p1_id, new_elo_p1, p1_data["score"], p2_data["score"]),
-        (p2_id, new_elo_p2, p2_data["score"], p1_data["score"])
-    ]:
-        xp_gain = score * 20 + 50 # Basic XP logic
-        await db.users.update_one(
-            {"_id": ObjectId(p_id)},
-            {
-                "$set": {"elo_rating": new_elo},
-                "$inc": {"total_xp": xp_gain}
-            }
-        )
-        
-        # Broadcast results to each player
-        try:
-            await match["players"][p_id]["websocket"].send_json({
-                "type": "MATCH_OVER",
-                "your_score": score,
-                "opponent_score": opponent_score,
-                "new_elo": new_elo,
-                "xp_gained": xp_gain
-            })
-        except Exception:
-            pass
-            
-    # Close sockets and cleanup
-    for p_id in match["players"]:
-        try:
-            await match["players"][p_id]["websocket"].close()
-        except Exception:
-            pass
-            
-    if match_id in manager.active_matches:
-        del manager.active_matches[match_id]
+        await manager.trigger_endgame(match_id, db, "ABANDONED")
