@@ -43,10 +43,10 @@ export default function Sidebar() {
           Upgrade to Pro
         </button>
         <div className="mt-6 flex items-center gap-3 px-2">
-          <img alt="User Profile Avatar" className="w-10 h-10 rounded-full bg-surface-container-high" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdJ3dOcKznXez6bRdiVao2KA8G_wyIdA8zj3Wymmk4t1kU5XXNfftoSGTitTXavljB036NZXUTX8j9YIeMzsHaLsFh_CNDXtYSpWdFDzgeXud9Kvqt-dALN9t6SgDACdAskX2ErDStGDVFQHv7iAx5oiMwK_abWpPq5_Mj8-5ugmz7qKbNeO5LqOJII5CqPTGWZgv3T7KMyGV1cBoID3ntc_qNeGsmp2qROCvrVIMCN8bfjNhTtNmom-I_eadtJPhfwtRbJTW4J4c" />
+          <img alt="User Profile Avatar" className="w-10 h-10 rounded-full bg-surface-container-high border border-cyan-500/30" src={location.pathname === '/mentor' ? "https://api.dicebear.com/7.x/avataaars/svg?seed=Aris" : "https://lh3.googleusercontent.com/aida-public/AB6AXuAdJ3dOcKznXez6bRdiVao2KA8G_wyIdA8zj3Wymmk4t1kU5XXNfftoSGTitTXavljB036NZXUTX8j9YIeMzsHaLsFh_CNDXtYSpWdFDzgeXud9Kvqt-dALN9t6SgDACdAskX2ErDStGDVFQHv7iAx5oiMwK_abWpPq5_Mj8-5ugmz7qKbNeO5LqOJII5CqPTGWZgv3T7KMyGV1cBoID3ntc_qNeGsmp2qROCvrVIMCN8bfjNhTtNmom-I_eadtJPhfwtRbJTW4J4c"} />
           <div className="overflow-hidden">
-            <p className="text-sm font-bold truncate">Alex Chen</p>
-            <p className="text-[10px] text-slate-500 uppercase tracking-tighter">Rank #422</p>
+            <p className="text-sm font-bold truncate">{location.pathname === '/mentor' ? 'Dr. Aris Thorne' : 'Alex Chen'}</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-tighter">{location.pathname === '/mentor' ? 'Senior Lead Mentor' : 'Rank #422'}</p>
           </div>
         </div>
       </div>
