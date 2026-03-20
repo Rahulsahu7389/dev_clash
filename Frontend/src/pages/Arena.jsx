@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Radar, Swords, Trophy, Loader2, ArrowRight, Timer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api/axios';
 
 // ─── EASILY CONFIGURABLE CONSTANT ───────────────────────────────────────────
 // Change this to adjust how many seconds each question allows.
@@ -9,8 +10,9 @@ const SECONDS_PER_QUESTION = 30;
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function Arena() {
-  const [gameState, setGameState] = useState('MATCHMAKING'); // MATCHMAKING | BATTLE | RESULTS
+  const [matchState, setMatchState] = useState('searching'); // 'searching' | 'battling' | 'waiting_for_opponent' | 'finished'
   const [opponent, setOpponent] = useState(null);
+  const [examTrack, setExamTrack] = useState('JEE');
 
   // Battle state
   const [questions, setQuestions] = useState([]);
@@ -41,15 +43,20 @@ export default function Arena() {
       return;
     }
 
+    api.get('/auth/me').then(res => {
+      if (res.data?.exam_track) setExamTrack(res.data.exam_track);
+    }).catch(err => console.error(err));
+
     ws.current = new WebSocket(`ws://localhost:8000/ws/arena?token=${token}`);
 
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log('WS Received:', data);
+      const type = data.type?.toUpperCase() || '';
 
-      if (data.type === 'match_found') {
+      if (type === 'MATCH_FOUND') {
         setOpponent(data.opponent);
-      } else if (data.type === 'battle_start') {
+      } else if (type === 'BATTLE_START') {
         setQuestions(data.questions);
         setCurrentQuestionIndex(0);
         setPlayerScore(0);
@@ -57,13 +64,16 @@ export default function Arena() {
         setSelectedAnswer(null);
         setTimeLeft(SECONDS_PER_QUESTION);
         isAdvancing.current = false;
-        setGameState('BATTLE');
-      } else if (data.type === 'opponent_progress') {
-        setOpponentScore(data.score);
-      } else if (data.type === 'match_over') {
+        setMatchState('battling');
+      } else if (type === 'OPPONENT_PROGRESS') {
+        setOpponentScore(data.opponent_score !== undefined ? data.opponent_score : data.score);
+      } else if (type === 'WAITING_FOR_OPPONENT') {
+        setMatchState('waiting_for_opponent');
+        setPlayerScore(data.your_score);
+      } else if (type === 'MATCH_OVER') {
         setResultsData(data);
-        setGameState('RESULTS');
-      } else if (data.type === 'error') {
+        setMatchState('finished');
+      } else if (type === 'ERROR') {
         console.error('Arena Error:', data.message);
       }
     };
@@ -85,7 +95,7 @@ export default function Arena() {
     // Fire WS payload — timeout uses is_correct: false, mimicking a wrong answer.
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({
-        type: 'answer_submitted',
+        type: 'ANSWER_SUBMITTED',
         question_idx: currentQuestionIndex,
         is_correct: false,
         timed_out: timedOut,
@@ -107,7 +117,7 @@ export default function Arena() {
 
   // Main Countdown Effect — depends on currentIndex so it resets each question.
   useEffect(() => {
-    if (gameState !== 'BATTLE') return;
+    if (matchState !== 'battling') return;
 
     // Reset for new question
     setTimeLeft(SECONDS_PER_QUESTION);
@@ -127,16 +137,16 @@ export default function Arena() {
     // ── MEMORY LEAK PREVENTION ─────────────────────────────────────────────
     return () => clearInterval(interval);
 
-  }, [currentQuestionIndex, gameState]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentQuestionIndex, matchState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Watch timeLeft — when it hits 0, trigger the timeout handler.
   useEffect(() => {
-    if (gameState !== 'BATTLE') return;
+    if (matchState !== 'battling') return;
     if (timeLeft !== 0) return;
     if (selectedAnswer !== null) return; // Already answered — let the normal flow run.
 
     handleTimeout();
-  }, [timeLeft, gameState]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeLeft, matchState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTimeout = () => {
     if (isAdvancing.current) return;
@@ -155,7 +165,7 @@ export default function Arena() {
     // Send standard WS payload
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({
-        type: 'answer_submitted',
+        type: 'ANSWER_SUBMITTED',
         question_idx: currentQuestionIndex,
         is_correct: correct,
         timed_out: false,
@@ -190,7 +200,7 @@ export default function Arena() {
   // ═══════════════════════════════════════════════════════════════════════════
   // SCENE: MATCHMAKING
   // ═══════════════════════════════════════════════════════════════════════════
-  if (gameState === 'MATCHMAKING') {
+  if (matchState === 'searching') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-6rem)] relative overflow-hidden">
         <motion.div
@@ -209,6 +219,9 @@ export default function Arena() {
             <Radar className="w-12 h-12 text-primary animate-pulse" />
           </div>
           <h2 className="text-3xl font-headline font-bold text-on-surface mb-2">Finding Opponent</h2>
+          <div className="bg-primary/20 text-primary px-4 py-1.5 rounded-full font-bold text-sm tracking-widest mb-4 border border-primary/30 shadow-[0_0_10px_rgba(14,165,233,0.2)]">
+            {examTrack} TRACK
+          </div>
           <p className="text-on-surface-variant text-sm flex items-center gap-2">
             Searching global queue...
             <Loader2 className="w-3 h-3 animate-spin" />
@@ -232,10 +245,44 @@ export default function Arena() {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // SCENE: WAITING FOR OPPONENT
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (matchState === 'waiting_for_opponent') {
+    const maxScore = questions.length || 5;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-6rem)] relative overflow-hidden">
+        <div className="z-10 flex flex-col items-center bg-surface-container-high/80 backdrop-blur-md p-10 rounded-2xl border border-outline-variant/20 shadow-2xl w-full max-w-md">
+          <Loader2 className="w-16 h-16 text-primary animate-spin mb-6" />
+          <h2 className="text-3xl font-headline font-bold text-on-surface mb-2">Nail-Biter!</h2>
+          <p className="text-on-surface-variant text-lg font-medium mb-6">
+            You scored {playerScore}/{maxScore}!
+          </p>
+          <div className="w-full bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10 text-center">
+            <p className="text-sm text-on-surface-variant uppercase tracking-widest font-bold mb-4">Opponent Progress</p>
+            <div className="w-full h-4 bg-surface-container-highest rounded-full overflow-hidden shadow-inner mb-2">
+              <motion.div
+                animate={{ width: `${(opponentScore / maxScore) * 100}%` }}
+                className="h-full bg-error"
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+            <p className="text-error font-bold text-sm">{opponentScore} / {maxScore}</p>
+          </div>
+          <p className="mt-6 text-sm text-primary font-bold animate-pulse">Waiting for opponent to finish...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // SCENE: RESULTS
   // ═══════════════════════════════════════════════════════════════════════════
-  if (gameState === 'RESULTS') {
-    const isWinner = resultsData?.xp_gained === 50;
+  if (matchState === 'finished') {
+    const isForfeit = resultsData?.reason === 'opponent_disconnected';
+    const isWinner = isForfeit || (resultsData?.your_score > resultsData?.opponent_score);
+    const isDraw = !isForfeit && (resultsData?.your_score === resultsData?.opponent_score);
+    const newElo = resultsData?.your_new_elo ?? resultsData?.new_elo;
+
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -255,19 +302,31 @@ export default function Arena() {
             )}
           </div>
 
-          <h1 className="text-4xl font-headline font-extrabold mb-2 text-on-surface">
-            {isWinner ? 'Victory!' : 'Defeat'}
+          <h1 className="text-4xl font-headline font-extrabold mb-4 text-on-surface">
+            {isForfeit ? 'Opponent Fled!' : isWinner ? 'Victory!' : isDraw ? 'Draw!' : 'Defeat'}
           </h1>
+          
+          {isForfeit && (
+            <div className="mb-6 inline-block text-emerald-400 font-bold bg-emerald-500/10 px-4 py-2 rounded-lg border border-emerald-500/20 shadow-md">
+              {resultsData?.message}
+            </div>
+          )}
 
-          <div className="my-8 flex justify-center gap-8">
+          <div className="my-8 flex justify-center gap-6">
             <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/10 text-center flex-1">
               <p className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">New Elo</p>
-              <p className="text-3xl font-headline font-bold text-tertiary">{resultsData?.new_elo}</p>
+              <p className="text-3xl font-headline font-bold text-tertiary">{newElo}</p>
             </div>
-            <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/10 text-center flex-1">
-              <p className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">XP Gained</p>
-              <p className="text-3xl font-headline font-bold text-primary">+{resultsData?.xp_gained}</p>
-            </div>
+            {!isForfeit && (
+              <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/10 text-center flex-1">
+                <p className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Score</p>
+                <p className="text-3xl font-headline font-bold text-on-surface">
+                  <span className="text-primary">{resultsData?.your_score}</span>
+                  <span className="text-on-surface-variant mx-1">-</span>
+                  <span className="text-error">{resultsData?.opponent_score}</span>
+                </p>
+              </div>
+            )}
           </div>
 
           <button

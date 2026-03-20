@@ -7,40 +7,35 @@ from app.utils.elo import calculate_new_elos
 
 class ConnectionManager:
     def __init__(self):
-        # List of dicts: {"user_id": str, "elo": int, "websocket": WebSocket}
-        self.waiting_queue: List[Dict[str, Any]] = []
-        
-        # Dict of match_id -> {
-        #   "players": {user_id: {"websocket": WebSocket, "score": int, "elo": int, "completed": bool}},
-        #   "questions": List[dict],
-        #   "status": str (waiting, ongoing, finished)
-        # }
+        self.waiting_queues: Dict[str, List[Dict[str, Any]]] = {
+            "JEE": [], "NEET": [], "UPSC": [], "GATE": []
+        }
         self.active_matches: Dict[str, Dict[str, Any]] = {}
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
 
-    def disconnect(self, websocket: WebSocket, user_id: str | None = None, match_id: str | None = None):
-        # Remove from waiting queue if exists
-        self.waiting_queue = [p for p in self.waiting_queue if p["websocket"] != websocket]
-        
-        # If in a match, handle appropriately (e.g., notify opponent)
-        # This will be handled more specifically in the endpoint loops
-        pass
+    def disconnect(self, websocket: WebSocket, user_id: str | None = None):
+        for track in self.waiting_queues:
+            self.waiting_queues[track] = [p for p in self.waiting_queues[track] if p["websocket"] != websocket]
 
-    async def find_match(self, user_id: str, elo_rating: int, websocket: WebSocket) -> str | None:
-        """
-        Check if another user is in waiting_queue. If yes, create a match.
-        Else add current user to queue.
-        Returns match_id if match is found, else None.
-        """
-        # Simple matchmaking: pick the first person in queue
-        # In a real app, we'd match by Elo range.
-        if self.waiting_queue:
-            opponent = self.waiting_queue.pop(0)
-            match_id = str(uuid.uuid4())
+    def remove_from_queue(self, user_id: str):
+        for track in self.waiting_queues:
+            self.waiting_queues[track] = [p for p in self.waiting_queues[track] if p["user_id"] != user_id]
+
+    async def find_match(self, user_id: str, elo_rating: int, exam_track: str, websocket: WebSocket) -> str | None:
+        if exam_track not in self.waiting_queues:
+            exam_track = "JEE"
             
+        queue = self.waiting_queues[exam_track]
+        valid_opponents = [p for p in queue if p["user_id"] != user_id]
+        if valid_opponents:
+            opponent = valid_opponents[0]
+            self.waiting_queues[exam_track] = [p for p in queue if p["user_id"] != opponent["user_id"]]
+            
+            match_id = str(uuid.uuid4())
             self.active_matches[match_id] = {
+                "exam_track": exam_track,
                 "players": {
                     user_id: {"websocket": websocket, "score": 0, "elo": elo_rating, "completed": False, "answer_count": 0},
                     opponent["user_id"]: {"websocket": opponent["websocket"], "score": 0, "elo": opponent["elo"], "completed": False, "answer_count": 0}
@@ -50,12 +45,29 @@ class ConnectionManager:
             }
             return match_id
         else:
-            self.waiting_queue.append({
-                "user_id": user_id,
-                "elo": elo_rating,
-                "websocket": websocket
-            })
+            if not any(p["user_id"] == user_id for p in queue):
+                self.waiting_queues[exam_track].append({
+                    "user_id": user_id,
+                    "elo": elo_rating,
+                    "websocket": websocket
+                })
             return None
+
+    def create_bot_match(self, user_id: str, elo_rating: int, exam_track: str, websocket: WebSocket) -> str:
+        match_id = str(uuid.uuid4())
+        bot_id = f"PRITHVI_BOT_{exam_track}_{elo_rating}"
+        if exam_track not in self.waiting_queues:
+            exam_track = "JEE"
+        self.active_matches[match_id] = {
+            "exam_track": exam_track,
+            "players": {
+                user_id: {"websocket": websocket, "score": 0, "elo": elo_rating, "completed": False, "answer_count": 0},
+                bot_id: {"websocket": None, "score": 0, "elo": elo_rating, "completed": False, "answer_count": 0}
+            },
+            "questions": [],
+            "status": "waiting"
+        }
+        return match_id
 
     def check_match_complete(self, match_id: str) -> bool:
         if match_id not in self.active_matches:
@@ -63,7 +75,7 @@ class ConnectionManager:
         match = self.active_matches[match_id]
         return all(p.get("completed", False) for p in match["players"].values())
 
-    async def trigger_endgame(self, match_id: str, db, reason: str = "NORMAL"):
+    async def trigger_endgame(self, match_id: str, db):
         if match_id not in self.active_matches:
             return
             
@@ -72,71 +84,111 @@ class ConnectionManager:
         if len(player_ids) != 2:
             return
             
-        player_a_id = player_ids[0]
-        player_b_id = player_ids[1]
+        p1_id = player_ids[0]
+        p2_id = player_ids[1]
 
-        score_a = match["players"][player_a_id]["score"]
-        score_b = match["players"][player_b_id]["score"]
+        score_p1 = match["players"][p1_id]["score"]
+        score_p2 = match["players"][p2_id]["score"]
 
-        elo_a = match["players"][player_a_id]["elo"]
-        elo_b = match["players"][player_b_id]["elo"]
+        elo_p1 = match["players"][p1_id]["elo"]
+        elo_p2 = match["players"][p2_id]["elo"]
 
-        new_elo_a, new_elo_b = calculate_new_elos(elo_a, elo_b, score_a, score_b)
+        new_elo_p1, new_elo_p2 = calculate_new_elos(elo_p1, elo_p2, score_p1, score_p2)
 
-        await db["users"].update_one({"_id": ObjectId(player_a_id)}, {"$set": {"elo_rating": new_elo_a}})
-        await db["users"].update_one({"_id": ObjectId(player_b_id)}, {"$set": {"elo_rating": new_elo_b}})
-        
-        # Determine winner
-        winner_id = None
-        if score_a > score_b:
-            winner_id = player_a_id
-        elif score_b > score_a:
-            winner_id = player_b_id
-        elif reason == "ABANDONED":
-            # If abandoned, the still-connected player wins by default.
-            # Simplified logic: If B abandoned, A wins. 
-            pass
-
-        # Send personalized message to Player A
-        ws_a = match["players"][player_a_id]["websocket"]
-        try:
-             await ws_a.send_json({
-                 "type": "match_over",
-                 "winner_id": winner_id,
-                 "new_elo": new_elo_a,
-                 "xp_gained": 50 if winner_id == player_a_id else 15
-             })
-        except Exception: pass
-        
-        # Send personalized message to Player B
-        ws_b = match["players"][player_b_id]["websocket"]
-        try:
-             await ws_b.send_json({
-                 "type": "match_over",
-                 "winner_id": winner_id,
-                 "new_elo": new_elo_b,
-                 "xp_gained": 50 if winner_id == player_b_id else 15
-             })
-        except Exception: pass
-
-        for p_id in player_ids:
+        if not p1_id.startswith("PRITHVI_BOT"):
             try:
-                await match["players"][p_id]["websocket"].close()
-            except Exception:
-                pass
+                await db["users"].update_one({"_id": ObjectId(p1_id)}, {"$set": {"elo_rating": new_elo_p1}})
+            except Exception: pass
+            
+            ws_p1 = match["players"][p1_id]["websocket"]
+            if ws_p1:
+                try:
+                    await ws_p1.send_json({
+                        "type": "MATCH_OVER",
+                        "your_score": score_p1,
+                        "opponent_score": score_p2,
+                        "new_elo": new_elo_p1
+                    })
+                    await ws_p1.close()
+                except Exception: pass
+
+        if not p2_id.startswith("PRITHVI_BOT"):
+            try:
+                await db["users"].update_one({"_id": ObjectId(p2_id)}, {"$set": {"elo_rating": new_elo_p2}})
+            except Exception: pass
+            
+            ws_p2 = match["players"][p2_id]["websocket"]
+            if ws_p2:
+                try:
+                    await ws_p2.send_json({
+                        "type": "MATCH_OVER",
+                        "your_score": score_p2,
+                        "opponent_score": score_p1,
+                        "new_elo": new_elo_p2
+                    })
+                    await ws_p2.close()
+                except Exception: pass
 
         if match_id in self.active_matches:
             self.active_matches.pop(match_id, None)
+
+    async def handle_disconnect(self, match_id: str, quitter_id: str, db):
+        if match_id not in self.active_matches:
+            return
+        match = self.active_matches[match_id]
+        player_ids = list(match["players"].keys())
+        if len(player_ids) != 2:
+            return
+            
+        survivor_id = player_ids[0] if player_ids[1] == quitter_id else player_ids[1]
+        
+        match["players"][quitter_id]["score"] = 0
+        match["players"][survivor_id]["score"] = 5
+        
+        quitter_elo = match["players"][quitter_id]["elo"]
+        survivor_elo = match["players"][survivor_id]["elo"]
+        
+        new_quitter_elo, new_survivor_elo = calculate_new_elos(quitter_elo, survivor_elo, 0, 5)
+        
+        if not quitter_id.startswith("PRITHVI_BOT"):
+            try:
+                await db["users"].update_one({"_id": ObjectId(quitter_id)}, {"$set": {"elo_rating": new_quitter_elo}})
+            except Exception: pass
+            
+        if not survivor_id.startswith("PRITHVI_BOT"):
+            try:
+                await db["users"].update_one(
+                    {"_id": ObjectId(survivor_id)},
+                    {"$set": {"elo_rating": new_survivor_elo}, "$inc": {"xp": 50}}
+                )
+            except Exception: pass
+            
+            survivor_ws = match["players"][survivor_id]["websocket"]
+            if survivor_ws:
+                try:
+                    await survivor_ws.send_json({
+                        "type": "MATCH_OVER",
+                        "reason": "opponent_disconnected",
+                        "your_score": 5,
+                        "opponent_score": 0,
+                        "your_new_elo": new_survivor_elo,
+                        "message": "Opponent fled! You win by forfeit."
+                    })
+                    await survivor_ws.close()
+                except Exception:
+                    pass
+                    
+        self.active_matches.pop(match_id, None)
 
     async def broadcast_to_match(self, match_id: str, message: dict):
         if match_id in self.active_matches:
             players = self.active_matches[match_id]["players"]
             for player_id in players:
                 ws = players[player_id]["websocket"]
-                try:
-                    await ws.send_json(message)
-                except Exception:
-                    # Handle disconnected clients
-                    pass
+                if ws:
+                    try:
+                        await ws.send_json(message)
+                    except Exception:
+                        pass
 
 manager = ConnectionManager()

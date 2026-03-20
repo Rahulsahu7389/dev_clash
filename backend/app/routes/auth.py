@@ -28,7 +28,8 @@ async def register(user: UserCreate):
         "hashed_password": hash_password(user.password),
         "role": "student",
         "elo_rating": 1200,
-        "total_xp": 0
+        "total_xp": 0,
+        "exam_track": user.exam_track
     }
     
     result = await db.users.insert_one(user_dict)
@@ -62,6 +63,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         "email": user.get("email"),
         "role": user.get("role", "student"),
         "elo_rating": user.get("elo_rating", 1200),
-        "total_xp": user.get("total_xp", 0)
+        "total_xp": user.get("total_xp", 0),
+        "exam_track": user.get("exam_track", "JEE")
     }
 
