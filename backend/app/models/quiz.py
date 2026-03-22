@@ -1,9 +1,14 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 
-class QuizGenerateRequest(BaseModel):
-    topic: str = Field(..., min_length=2, max_length=200, description="The topic to generate quiz questions for")
+class VaultHistorySchema(BaseModel):
+    user_id: str
+    source_reference: str
+    source_type: str
+    extracted_topics: List[str]
+    created_at: datetime = Field(default_factory=datetime.now)
 
 
 class MCQItem(BaseModel):
@@ -13,6 +18,41 @@ class MCQItem(BaseModel):
     explanation: str
 
 
+class QuizMasterSchema(BaseModel):
+    id: Optional[str] = Field(None, alias="_id")
+    user_id: str
+    target_topics: List[str]
+    generation_type: str # "historical" or "custom"
+    questions: List[MCQItem]
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class QuizResponseItem(BaseModel):
+    question_idx: int
+    selected_option: str
+    is_correct: bool
+    approach_feedback: str
+
+
+class QuizAttemptSchema(BaseModel):
+    user_id: str
+    quiz_id: str
+    target_topics: List[str]
+    score: int
+    total_questions: int
+    responses: List[QuizResponseItem]
+    completed_at: datetime = Field(default_factory=datetime.now)
+
+
+class QuizGenerateRequest(BaseModel):
+    target_topics: List[str] = Field(..., description="Topics to generate quiz questions for")
+    generation_type: str = Field("custom", description="'historical' or 'custom'")
+
+
 class QuizSubmitRequest(BaseModel):
-    topic: str = Field(..., min_length=2, max_length=200)
-    quality: int = Field(..., ge=0, le=5, description="Recall quality: 0 (blackout) to 5 (perfect)")
+    quiz_id: str
+    target_topics: List[str]
+    score: int
+    total_questions: int
+    responses: List[QuizResponseItem]
+    completed_at: datetime

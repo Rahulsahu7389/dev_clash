@@ -7,6 +7,31 @@ export default {
   darkMode: "class",
   theme: {
       extend: {
+          keyframes: {
+              shimmer: {
+                  '0%':   { transform: 'translateX(-100%)' },
+                  '100%': { transform: 'translateX(200%)'  },
+              },
+              'pulse-glow': {
+                  '0%, 100%': { opacity: '0.4', transform: 'scale(1)'    },
+                  '50%':      { opacity: '0.8', transform: 'scale(1.12)' },
+              },
+              'gradient-spin': {
+                  '0%':   { transform: 'rotate(0deg)'   },
+                  '100%': { transform: 'rotate(360deg)' },
+              },
+          },
+          animation: {
+              shimmer:        'shimmer 1.6s infinite linear',
+              'pulse-glow':   'pulse-glow 2.5s ease-in-out infinite',
+              'gradient-spin':'gradient-spin 3s linear infinite',
+          },
+          boxShadow: {
+              'glow-cyan':   '0 0 24px rgba(34,211,238,0.35), 0 0 48px rgba(34,211,238,0.12)',
+              'glow-violet': '0 0 24px rgba(167,139,250,0.35), 0 0 48px rgba(167,139,250,0.12)',
+              'glow-emerald':'0 0 16px rgba(52,211,153,0.3)',
+              'glow-rose':   '0 0 16px rgba(248,113,113,0.3)',
+          },
           colors: {
               "tertiary-container": "rgb(var(--tertiary-container) / <alpha-value>)",
               "outline": "rgb(var(--outline) / <alpha-value>)",
@@ -65,3 +90,4 @@ export default {
   },
   plugins: [],
 }
+

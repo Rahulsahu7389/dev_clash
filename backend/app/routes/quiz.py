@@ -1,32 +1,89 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import datetime, timezone
 from typing import List
+from bson import ObjectId
 
 from app.core.dependencies import get_current_user
 from app.core.database import get_database
-from app.models.quiz import QuizGenerateRequest, MCQItem, QuizSubmitRequest
+from app.models.quiz import QuizGenerateRequest, MCQItem, QuizSubmitRequest, QuizMasterSchema, QuizAttemptSchema
 from app.utils.srs import calculate_next_review
 from app.services.llm import generate_mcqs
 
 router = APIRouter(prefix="/quiz", tags=["Quiz & SRS"])
 
 
-@router.post("/generate", response_model=List[MCQItem])
+@router.get("/recommendations", response_model=List[str])
+async def get_quiz_recommendations(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Aggregation Engine: Finds the user's most frequently extracted topics 
+    from their vault history to recommend for a quiz.
+    """
+    db = get_database()
+    user_id = current_user["user_id"]
+
+    pipeline = [
+        {"$match": {"user_id": user_id}},
+        {"$unwind": "$extracted_topics"},
+        {"$group": {
+            "_id": "$extracted_topics",
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": 5}
+    ]
+
+    cursor = db.vault_history.aggregate(pipeline)
+    results = await cursor.to_list(length=5)
+    
+    return [doc["_id"] for doc in results]
+
+
+@router.post("/generate", response_model=dict)
 async def generate_quiz(
     request: QuizGenerateRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Generate 5 MCQs for the given topic using AI.
-    Requires a valid JWT token.
+    Generate 5 MCQs for the given target topics using AI.
+    Saves the generated quiz to QuizMaster collection.
     """
+    db = get_database()
+    user_id = current_user["user_id"]
+    
     try:
-        questions = await generate_mcqs(request.topic)
-        return questions
-    except RuntimeError as e:
+        # 1. Fetch the user from the database to get their assigned exam_track (ADDED)
+        user_doc = await db.users.find_one({"_id": ObjectId(user_id)})
+        exam_track = user_doc.get("exam_track", "General") if user_doc else "General"
+
+        # 2. Generate Questions via LLM (UPDATED to pass exam_track)
+        # 🔴 Passing the newly required 'exam_track' positional argument
+        questions_raw = await generate_mcqs(request.target_topics, exam_track)
+        questions = [MCQItem(**q) for q in questions_raw]
+
+        # 3. Create Quiz Master Record
+        quiz_master = QuizMasterSchema(
+            user_id=user_id,
+            target_topics=request.target_topics,
+            generation_type=request.generation_type,
+            questions=questions,
+            created_at=datetime.now(timezone.utc)
+        )
+
+        # 4. Insert into MongoDB
+        result = await db.quizzes.insert_one(quiz_master.dict(by_alias=True, exclude={"id"}))
+        quiz_id = str(result.inserted_id)
+
+        return {
+            "quiz_id": quiz_id,
+            "questions": questions
+        }
+        
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(e)
+            detail=f"Quiz generation failed: {str(e)}"
         )
 
 
@@ -36,47 +93,81 @@ async def submit_quiz(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Submit a quiz result. This:
-    1. Looks up or creates the user's SRS record for the topic.
-    2. Runs the SM-2 algorithm to compute the next review schedule.
-    3. Upserts the SRS record in MongoDB.
-    4. Upserts the daily activity log (for the GitHub-style heatmap).
+    Finalized Submission Engine:
+    - Persists detailed quiz attempts.
+    - Updates user XP and ELO.
+    - Populates mistake logs and SRS records.
     """
     db = get_database()
     user_id = current_user["user_id"]
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now_utc = request.completed_at if request.completed_at else datetime.now(timezone.utc)
+    today_str = now_utc.strftime("%Y-%m-%d")
 
-    # --- Step 1: Find or default SRS record for this topic ---
-    srs_record = await db.srs_records.find_one(
-        {"user_id": user_id, "topic": request.topic}
+    # 1. Align Target Topics
+    target_topics = request.target_topics
+
+    # 2. Replicate Gamification Math
+    total_q = request.total_questions
+    pct = (request.score / total_q) if total_q > 0 else 0
+    xp_gained = int(pct * 120)
+    elo_delta = int(pct * 28) if pct >= 0.6 else -int((1 - pct) * 18)
+
+    # Permanent Global Stat Persistence
+    await db.users.update_one(
+        {"_id": ObjectId(user_id)}, 
+        {"$inc": {"total_xp": xp_gained, "elo_rating": elo_delta}}
     )
 
-    current_ease_factor = srs_record["ease_factor"] if srs_record else 2.5
-    current_interval = srs_record["interval"] if srs_record else 0
-
-    # --- Step 2: Apply SM-2 algorithm ---
-    srs_result = calculate_next_review(
-        quality=request.quality,
-        ease_factor=current_ease_factor,
-        interval=current_interval
-    )
-
-    # --- Step 3: Upsert SRS record ---
-    await db.srs_records.update_one(
-        {"user_id": user_id, "topic": request.topic},
-        {
-            "$set": {
+    # 3. Implement the Mistake Vault
+    mistakes_to_insert = []
+    for resp in request.responses:
+        if not resp.is_correct:
+            mistakes_to_insert.append({
                 "user_id": user_id,
-                "topic": request.topic,
-                "ease_factor": srs_result["ease_factor"],
-                "interval": srs_result["interval"],
-                "next_review_date": srs_result["next_review_date"],
-            }
-        },
-        upsert=True
-    )
+                "quiz_id": request.quiz_id,
+                "question_idx": resp.question_idx,
+                "selected_option": resp.selected_option,
+                "target_topics": target_topics,
+                "is_resolved": False,
+                "created_at": now_utc
+            })
 
-    # --- Step 4: Upsert activity log (increment actions_completed for today) ---
+    if mistakes_to_insert:
+        await db.mistake_logs.insert_many(mistakes_to_insert)
+
+    # 4. Attempt Persistence (EXACT SCHEMA MATCH)
+    await db.quiz_attempts.insert_one({
+        "user_id": user_id,
+        "quiz_id": request.quiz_id,
+        "target_topics": target_topics,
+        "score": request.score,
+        "total_questions": request.total_questions,
+        "responses": [r.dict() for r in request.responses],
+        "completed_at": now_utc
+    })
+
+    # 5. SRS Topic Updates
+    quality = int(pct * 5)
+    for topic in target_topics:
+        srs_record = await db.srs_records.find_one({"user_id": user_id, "topic": topic})
+        cf = srs_record["ease_factor"] if srs_record else 2.5
+        interval = srs_record["interval"] if srs_record else 0
+
+        # Note: Using 'quality' calculated as int(pct * 5) to ensure integer type
+        srs_result = calculate_next_review(quality, cf, interval)
+        await db.srs_records.update_one(
+            {"user_id": user_id, "topic": topic},
+            {
+                "$set": {
+                    "ease_factor": srs_result["ease_factor"],
+                    "interval": srs_result["interval"],
+                    "next_review_date": srs_result["next_review_date"],
+                }
+            },
+            upsert=True
+        )
+
+    # 6. Daily Activity Update
     await db.activity_logs.update_one(
         {"user_id": user_id, "date": today_str},
         {
@@ -87,21 +178,18 @@ async def submit_quiz(
     )
 
     return {
-        "message": "Quiz submitted successfully",
-        "topic": request.topic,
-        "next_review_in_days": srs_result["interval"],
-        "next_review_date": srs_result["next_review_date"].strftime("%Y-%m-%d"),
-        "ease_factor": srs_result["ease_factor"],
+        "message": "Quiz submitted",
+        "score": request.score,
+        "xp_gained": xp_gained,
+        "elo_delta": elo_delta,
+        "mistakes_logged": len(mistakes_to_insert)
     }
-
-
 @router.get("/daily", response_model=List[str])
 async def get_daily_review(
     current_user: dict = Depends(get_current_user)
 ):
     """
     Get a list of topics due for review today.
-    Queries srs_records where next_review_date <= now (UTC).
     """
     db = get_database()
     user_id = current_user["user_id"]
@@ -112,10 +200,8 @@ async def get_daily_review(
             "user_id": user_id,
             "next_review_date": {"$lte": now_utc}
         },
-        {"topic": 1, "_id": 0}  # Project only the topic field
+        {"topic": 1, "_id": 0}
     )
 
     due_records = await cursor.to_list(length=100)
-    topics_due = [record["topic"] for record in due_records]
-
-    return topics_due
+    return [record["topic"] for record in due_records]

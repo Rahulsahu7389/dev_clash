@@ -1,0 +1,211 @@
+﻿.\venv\Scripts\python : 
+Traceback (most recent call 
+last):
+At line:1 char:1
++ .\venv\Scripts\python -m 
+uvicorn app.main:app *>&1 | 
+Out-File -FilePa ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (Traceba  
+  ck (most recent call las   
+ t)::String) [], RemoteEx    
+ception
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+  File "<frozen runpy>", 
+line 198, in 
+_run_module_as_main
+  File "<frozen runpy>", 
+line 88, in _run_code
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\uvicorn\__main__.py", line 
+4, in <module>
+    uvicorn.main()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\click\core.py", line 1485, 
+in __call__
+    return self.main(*args, 
+**kwargs)
+           
+~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\click\core.py", line 1406, 
+in main
+    rv = self.invoke(ctx)
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\click\core.py", line 1269, 
+in invoke
+    return 
+ctx.invoke(self.callback, 
+**ctx.params)
+           ~~~~~~~~~~^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\click\core.py", line 824, 
+in invoke
+    return callback(*args, 
+**kwargs)
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\uvicorn\main.py", line 
+433, in main
+    run(
+    ~~~^
+        app,
+        ^^^^
+    ...<47 lines>...
+        h11_max_incomplete_ev
+ent_size=h11_max_incomplete_e
+vent_size,
+        ^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\uvicorn\main.py", line 
+606, in run
+    server.run()
+    ~~~~~~~~~~^^
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\uvicorn\server.py", line 
+75, in run
+    return asyncio_run(self.s
+erve(sockets=sockets), loop_f
+actory=self.config.get_loop_f
+actory())
+  File "C:\Users\ashutosh beh
+era\anaconda3\Lib\asyncio\run
+ners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\ashutosh beh
+era\anaconda3\Lib\asyncio\run
+ners.py", line 118, in run
+    return self._loop.run_unt
+il_complete(task)
+           ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~^^^^^^
+  File "C:\Users\ashutosh beh
+era\anaconda3\Lib\asyncio\bas
+e_events.py", line 725, in 
+run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\uvicorn\server.py", line 
+79, in serve
+    await 
+self._serve(sockets)
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\uvicorn\server.py", line 
+86, in _serve
+    config.load()
+    ~~~~~~~~~~~^^
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\uvicorn\config.py", line 
+441, in load
+    self.loaded_app = 
+import_from_string(self.app)
+                      
+~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\uvicorn\importer.py", line 
+22, in import_from_string
+    raise exc from None
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\uvicorn\importer.py", line 
+19, in import_from_string
+    module = importlib.import
+_module(module_str)
+  File "C:\Users\ashutosh beh
+era\anaconda3\Lib\importlib\_
+_init__.py", line 88, in 
+import_module
+    return _bootstrap._gcd_im
+port(name[level:], package, 
+level)
+           ~~~~~~~~~~~~~~~~~~
+~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^
+  File "<frozen 
+importlib._bootstrap>", line 
+1387, in _gcd_import
+  File "<frozen 
+importlib._bootstrap>", line 
+1360, in _find_and_load
+  File "<frozen 
+importlib._bootstrap>", line 
+1331, in 
+_find_and_load_unlocked
+  File "<frozen 
+importlib._bootstrap>", line 
+935, in _load_unlocked
+  File "<frozen importlib._bo
+otstrap_external>", line 
+1026, in exec_module
+  File "<frozen 
+importlib._bootstrap>", line 
+488, in 
+_call_with_frames_removed
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\app\main.py", line 
+4, in <module>
+    from app.routes import 
+quiz
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\app\routes\quiz.py", 
+line 9, in <module>
+    from app.services.llm 
+import generate_mcqs
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\app\services\llm.py",
+ line 8, in <module>
+    from app.services.rag 
+import collection
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\app\services\rag.py",
+ line 6, in <module>
+    import fitz  # PyMuPDF
+    ^^^^^^^^^^^
+  File "C:\Users\ashutosh beh
+era\Desktop\Dev-cl\dev_clash\
+backend\venv\Lib\site-package
+s\fitz\__init__.py", line 1, 
+in <module>
+    from frontend import *
+ModuleNotFoundError: No 
+module named 'frontend'

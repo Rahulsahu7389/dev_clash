@@ -1,0 +1,34 @@
+﻿.\venv\Scripts\python : 
+INFO:     Started server 
+process [5148]
+At line:1 char:1
++ .\venv\Scripts\python -m 
+uvicorn app.main:app *>&1 | 
+Out-File -FilePa ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (INFO:    
+     Started server proces   
+ s [5148]:String) [], Rem    
+oteException
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+INFO:     Waiting for 
+application startup.
+INFO:     Application 
+startup complete.
+ERROR:    [Errno 10048] 
+error while attempting to 
+bind on address 
+('127.0.0.1', 8000): 
+[winerror 10048] only one 
+usage of each socket address 
+(protocol/network 
+address/port) is normally 
+permitted
+INFO:     Waiting for 
+application shutdown.
+INFO:     Application 
+shutdown complete.
