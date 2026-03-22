@@ -203,6 +203,10 @@ async def generate_vault_answer(question: str, active_doc_ids: list[str], socrat
             "Add a citation tag EXACTLY like this: [DocName, Page X] when referencing context."
         )
         
+    system_instruction += (
+        " LANGUAGE DETECT AND MIRROR: Analyze the language of the user's question. If the user asks the question in Hindi (Devanagari script) or Hinglish (Hindi written in English alphabet), you MUST output your 'answer' field entirely in that exact same language/style. Explain complex terms simply. Keep the 'concept_nodes' and 'concept_edges' in English for system compatibility."
+    )
+
     # JSON schema output
     system_instruction += (
         "\n\nYou MUST return a valid JSON object with EXACTLY this structure. "

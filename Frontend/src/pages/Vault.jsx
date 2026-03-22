@@ -6,6 +6,7 @@ import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 import ReactMarkdown from 'react-markdown';
 import api from '../api/axios';
+import useHindiVoice from '../hooks/useHindiVoice';
 
 // Required for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -75,6 +76,19 @@ export default function Vault() {
   const [conceptGraph, setConceptGraph] = useState({ nodes: [], links: [] });
   const [scratchpadNotes, setScratchpadNotes] = useState([]);
   
+  const { transcript, isListening, startListening, stopListening, speakHindi } = useHindiVoice();
+  const [isVoiceMuted, setIsVoiceMuted] = useState(false);
+
+  useEffect(() => {
+    if (transcript && !isListening) {
+      setQuestion(transcript);
+      setTimeout(() => {
+        const askBtn = document.getElementById('vault-ask-btn');
+        if (askBtn) askBtn.click();
+      }, 50);
+    }
+  }, [transcript, isListening]);
+
   // PDF Viewer State
   const [selectedPdfUrl, setSelectedPdfUrl] = useState(null);
   const [pdfPage, setPdfPage] = useState(1);
@@ -156,13 +170,14 @@ export default function Vault() {
     );
   };
 
-  const handleAsk = async () => {
-    if (!question.trim()) return;
+  const handleAsk = async (e) => {
+    const textToAsk = typeof e === 'string' ? e : question;
+    if (!textToAsk.trim()) return;
     
     const token = localStorage.getItem("access_token");
     if (!token) return alert("You must be logged in to ask questions.");
 
-    const newMessage = { role: "user", text: question };
+    const newMessage = { role: "user", text: textToAsk };
     setChatHistory(prev => [...prev, newMessage]);
     setQuestion("");
     setIsLoading(true);
@@ -178,6 +193,10 @@ export default function Vault() {
       
       setChatHistory(prev => [...prev, { role: "assistant", text: answer }]);
       
+      if (!isVoiceMuted && speakHindi) {
+        speakHindi(answer);
+      }
+
       if (concept_nodes && concept_edges) {
         const initialNodes = concept_nodes.map(n => ({
           id: n.id,
@@ -366,10 +385,19 @@ export default function Vault() {
              <h2 className="font-headline font-bold flex items-center gap-2">
                <span className="material-symbols-outlined text-secondary">psychology</span> Tutor AI
              </h2>
-             <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-               <input type="checkbox" className="toggle toggle-secondary toggle-sm" checked={socraticMode} onChange={e => setSocraticMode(e.target.checked)} />
-               Socratic Mode
-             </label>
+             <div className="flex items-center gap-4">
+               <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-outline">
+                 <span className="material-symbols-outlined text-[18px]">
+                   {isVoiceMuted ? 'volume_off' : 'volume_up'}
+                 </span>
+                 <input type="checkbox" className="toggle toggle-sm" checked={isVoiceMuted} onChange={e => setIsVoiceMuted(e.target.checked)} />
+                 Mute AI Voice
+               </label>
+               <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                 <input type="checkbox" className="toggle toggle-secondary toggle-sm" checked={socraticMode} onChange={e => setSocraticMode(e.target.checked)} />
+                 Socratic Mode
+               </label>
+             </div>
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -392,14 +420,22 @@ export default function Vault() {
 
           <div className="shrink-0 p-4 border-t bg-surface-container-lowest border-outline-variant/5">
             <div className="flex items-center gap-2 bg-surface-container-high p-2 rounded-xl">
+              <button 
+                 onClick={isListening ? stopListening : startListening} 
+                 className={`p-2 flex items-center justify-center rounded-lg transition-colors ${isListening ? 'bg-error text-on-error animate-pulse' : 'bg-surface-container-highest text-on-surface hover:bg-surface-container'}`}
+                 title="Hindi Voice Chat"
+              >
+                <span className="material-symbols-outlined">{isListening ? 'mic' : 'mic_none'}</span>
+              </button>
               <input 
-                 value={question} 
-                 onChange={e => setQuestion(e.target.value)} 
-                 onKeyDown={e => e.key === 'Enter' && handleAsk()}
-                 placeholder="Ask a question about your documents..." 
-                 className="flex-1 bg-transparent border-none outline-none px-3 text-sm placeholder:text-outline"
+                 value={isListening ? transcript : question} 
+                 onChange={e => !isListening && setQuestion(e.target.value)} 
+                 onKeyDown={e => e.key === 'Enter' && !isListening && handleAsk()}
+                 placeholder={isListening ? "Listening..." : "Ask a question about your documents..."}
+                 className={`flex-1 bg-transparent border-none outline-none px-3 text-sm placeholder:text-outline ${isListening ? 'text-primary animate-pulse' : ''}`}
+                 readOnly={isListening}
               />
-              <button onClick={handleAsk} disabled={isLoading} className="bg-primary p-2 flex items-center justify-center rounded-lg text-on-primary disabled:opacity-50">
+              <button id="vault-ask-btn" onClick={handleAsk} disabled={isLoading || isListening} className="bg-primary p-2 flex items-center justify-center rounded-lg text-on-primary disabled:opacity-50">
                 <span className="material-symbols-outlined">send</span>
               </button>
             </div>
