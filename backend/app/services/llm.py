@@ -5,6 +5,7 @@ import httpx
 import logging
 from dotenv import load_dotenv
 from fastapi import HTTPException
+from app.services.rag import collection
 
 logger = logging.getLogger(__name__)
 
@@ -15,22 +16,14 @@ API_KEY = os.getenv("GEMINI_API_KEY", "").strip().strip("'").strip('"')
 if not API_KEY:
     raise RuntimeError("GEMINI_API_KEY is not set in the environment or .env file.")
 
+
 # ── Endpoint ─────────────────────────────────────────────────────────────────
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     f"gemini-2.5-flash:generateContent?key={API_KEY}"
 )
 
-# ── System Instruction ───────────────────────────────────────────────────────
-SYSTEM_INSTRUCTION = (
-    "You are an expert exam question creator for Indian competitive entrance exams (JEE / NEET). "
-    "Output ONLY a valid JSON array of exactly 5 objects. "
-    "NEVER use unescaped double quotes inside your text strings. "
-    "If you need to quote a term inside a question or explanation, use single quotes instead. "
-    "Do NOT wrap your response in markdown code fences or backticks. "
-    "Do NOT add any text before or after the JSON array. "
-    "Ensure the JSON is perfectly formatted and can be parsed by Python's json.loads()."
-)
+# ── System Instruction logic moved inside payload logic ─────────────────────
 
 # ── Response Schema (REST format) ─────────────────────────────────────────────
 RESPONSE_SCHEMA = {
@@ -48,21 +41,40 @@ RESPONSE_SCHEMA = {
 }
 
 
-def _build_payload(topic: str) -> dict:
+def _build_payload(topic: str, exam_track: str) -> dict:
     """Construct the full Gemini REST API request payload."""
+    system_instruction = (
+        f"You are an expert, strict examiner for the Indian {exam_track} competitive exam. "
+        f"Generate exactly 5 MCQs on the topic: {topic}. "
+        f"The difficulty, trickiness, and style must perfectly mirror actual past {exam_track} papers. "
+        "The user will provide a mixed list of subjects and topics. You must generate exactly 5 MCQs distributed as evenly as possible across the provided subjects. Do not focus on just one subject. "
+        "Keep the 'explanation' field extremely concise. Maximum 2 sentences per explanation. Do not write lengthy paragraphs. "
+        "Output ONLY a valid JSON array of exactly 5 objects. "
+        "NEVER use unescaped double quotes inside your text strings. "
+        "If you need to quote a term inside a question or explanation, use single quotes instead. "
+        "Do NOT wrap your response in markdown code fences or backticks. "
+        "Do NOT add any text before or after the JSON array. "
+        "Ensure the JSON is perfectly formatted and can be parsed by Python's json.loads()."
+    )
     return {
         "system_instruction": {
-            "parts": [{"text": SYSTEM_INSTRUCTION}]
+            "parts": [{"text": system_instruction}]
         },
         "contents": [
             {
                 "role": "user",
-                "parts": [{"text": f"Generate 5 MCQs about: {topic}"}],
+                "parts": [{"text": f"Generate 5 MCQs about: {topic} for {exam_track}"}],
             }
+        ],
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
         ],
         "generationConfig": {
             "temperature":      0.7,
-            "maxOutputTokens":  3000,
+            "maxOutputTokens":  8192,
             "responseMimeType": "application/json",
             "responseSchema":   RESPONSE_SCHEMA,
         },
@@ -114,74 +126,219 @@ def _log_raw_and_raise(raw_text: str, reason: str):
     print(f"REASON : {reason}")
     print(f"LENGTH : {len(raw_text)} chars")
     print("RAW TEXT ↓↓↓")
-    print(raw_text)          # complete text — no truncation
-    print(f"{border}\n")
-    raise HTTPException(
-        status_code=503,
-        detail=f"AI returned malformed JSON: {reason}",
+FALLBACK_MCQS = [
+    {
+        "question": "If a system is in equilibrium, the net force is?",
+        "options": ["Zero", "Maximum", "Minimum", "Infinite"],
+        "correct_answer": "Zero",
+        "explanation": "By definition, equilibrium means zero net force."
+    },
+    {
+        "question": "What is the derivative of e^x with respect to x?",
+        "options": ["x*e^(x-1)", "e^x", "ln(x)", "1/x"],
+        "correct_answer": "e^x",
+        "explanation": "The exponential function e^x is its own derivative."
+    },
+    {
+        "question": "In chemistry, what is the atomic number of Carbon?",
+        "options": ["12", "14", "6", "8"],
+        "correct_answer": "6",
+        "explanation": "Carbon features exactly 6 protons in its nucleus."
+    },
+    {
+        "question": "What is traditionally called the powerhouse of the cell?",
+        "options": ["Nucleus", "Mitochondria", "Ribosome", "Endoplasmic Reticulum"],
+        "correct_answer": "Mitochondria",
+        "explanation": "Mitochondria generate most of the cell's supply of ATP."
+    },
+    {
+        "question": "Which of these is a scalar quantity?",
+        "options": ["Velocity", "Acceleration", "Force", "Speed"],
+        "correct_answer": "Speed",
+        "explanation": "Speed has only magnitude, without a specific direction."
+    }
+]
+
+async def generate_mcqs(topic: str, exam_track: str) -> list[dict]:
+    """
+    Calls the Gemini REST API via httpx with up to 3 retries.
+    If generation is interrupted (e.g. MAX_TOKENS) or fails to parse,
+    it automatically retries. If all attempts fail, it returns FALLBACK_MCQS
+    so the players are never stuck on the loading page.
+    """
+    payload = _build_payload(topic, exam_track)
+    import asyncio
+
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                response = await client.post(
+                    GEMINI_URL,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                )
+
+            if response.status_code != 200:
+                logger.warning(f"Gemini API HTTP Error {response.status_code}: {response.text}")
+                continue
+
+            data = response.json()
+            candidate = data.get("candidates", [{}])[0]
+            finish_reason = candidate.get("finishReason")
+            
+            if finish_reason and finish_reason != "STOP":
+                logger.warning(f"Gemini finishReason was {finish_reason} on attempt {attempt + 1}")
+
+            raw_text: str = candidate.get("content", {}).get("parts", [{}])[0].get("text", "")
+
+            if not raw_text:
+                 logger.warning(f"AI returned empty response on attempt {attempt + 1}")
+                 continue
+                 
+            # If the json array was cut off, _extract_json_array will fail and raise exception
+            # which we catch below to retry.
+            mcqs = _extract_json_array(raw_text)
+
+            if isinstance(mcqs, list) and len(mcqs) > 0:
+                return mcqs
+
+        except Exception as e:
+            logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+            await asyncio.sleep(1)
+            
+    # If all 3 attempts fail, return robust fallback
+    logger.error("All 3 LLM attempts failed. Injecting fallback MCQs so the Arena continues securely.")
+    return FALLBACK_MCQS
+
+def _build_context_payload(context_text: str) -> dict:
+    system_instruction = (
+        "You are an expert examiner. Generate exactly 5 MCQs based STRICTLY on the provided context text. "
+        "Do not use outside knowledge. Output a valid JSON array of 5 objects containing 'question', 'options', 'correct_answer', and 'explanation'."
     )
+    return {
+        "system_instruction": {
+            "parts": [{"text": system_instruction}]
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": f"Context Text:\n{context_text}"}],
+            }
+        ],
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+        ],
+        "generationConfig": {
+            "temperature":      0.5,
+            "maxOutputTokens":  8192,
+            "responseMimeType": "application/json",
+            "responseSchema":   RESPONSE_SCHEMA,
+        },
+    }
 
+async def generate_mcqs_from_context(context_text: str) -> list[dict]:
+    payload = _build_context_payload(context_text)
+    import asyncio
 
-async def generate_mcqs(topic: str) -> list[dict]:
-    """
-    Calls the Gemini REST API via httpx and returns 5 MCQ dicts.
-    Uses a regex-based extractor to survive markdown fences and
-    unescaped quotes in the raw model output.
-    """
-    payload = _build_payload(topic)
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                response = await client.post(
+                    GEMINI_URL,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                )
 
-    try:
-        async with httpx.AsyncClient(timeout=90.0) as client:
-            response = await client.post(
-                GEMINI_URL,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-            )
+            if response.status_code != 200:
+                logger.warning(f"Gemini API HTTP Error {response.status_code}: {response.text}")
+                continue
 
-        # ── Non-200 response ──────────────────────────────────────────────
-        if response.status_code != 200:
-            border = "=" * 70
-            print(f"\n{border}")
-            print(f"🔥  GEMINI REST API FAILED — HTTP {response.status_code}")
-            print(f"TOPIC       : {topic}")
-            print(f"RAW RESPONSE: {response.text}")
-            print(f"{border}\n")
-            raise HTTPException(
-                status_code=503,
-                detail=f"Gemini API HTTP {response.status_code}: {response.text[:300]}",
-            )
+            data = response.json()
+            candidate = data.get("candidates", [{}])[0]
+            raw_text: str = candidate.get("content", {}).get("parts", [{}])[0].get("text", "")
 
-        # ── Extract nested text ───────────────────────────────────────────
-        data = response.json()
-        raw_text: str = data["candidates"][0]["content"]["parts"][0]["text"]
+            if not raw_text:
+                 continue
+                 
+            mcqs = _extract_json_array(raw_text)
 
-        print(f"\n--- RAW GEMINI TEXT for '{topic}' (first 600 chars) ---")
-        print(raw_text[:600])
-        print("--- END ---\n")
+            if isinstance(mcqs, list) and len(mcqs) > 0:
+                return mcqs
 
-        # ── Bulletproof parse ─────────────────────────────────────────────
-        mcqs = _extract_json_array(raw_text)
+        except Exception as e:
+            logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+            await asyncio.sleep(1)
+            
+    return FALLBACK_MCQS
 
-        if not isinstance(mcqs, list) or len(mcqs) == 0:
-            raise HTTPException(
-                status_code=503,
-                detail=f"Parsed result is not a non-empty list: {type(mcqs).__name__}",
-            )
+async def generate_vault_mcqs(doc_ids: list[str], track: str) -> list[dict]:
+    # Query ChromaDB to get all text chunks for the checked PDFs
+    results = collection.get(where={"doc_id": {"$in": doc_ids}})
+    
+    # Combine the text chunks, slice the string to a maximum of 15,000 characters
+    combined_text = "\n".join(results.get("documents", []))[:15000]
+    
+    # Pass this combined_text to Gemini 2.5 Flash
+    system_instruction = (
+        "You are an expert examiner. Generate exactly 5 MCQs based STRICTLY on the provided context text. "
+        "Do not hallucinate outside info. Output a valid JSON array of 5 objects containing 'question', 'options', 'correct_answer', and 'explanation'."
+    )
+    
+    payload = {
+        "system_instruction": {
+            "parts": [{"text": system_instruction}]
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": f"Context Text:\n{combined_text}"}],
+            }
+        ],
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+        ],
+        "generationConfig": {
+            "temperature":      0.5,
+            "maxOutputTokens":  8192,
+            "responseMimeType": "application/json",
+            "responseSchema":   RESPONSE_SCHEMA,
+        },
+    }
+    
+    import asyncio
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                response = await client.post(
+                    GEMINI_URL,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                )
 
-        return mcqs
+            if response.status_code != 200:
+                logger.warning(f"Gemini API HTTP Error {response.status_code}: {response.text}")
+                continue
 
-    except HTTPException:
-        raise  # Never double-wrap HTTPExceptions
+            data = response.json()
+            candidate = data.get("candidates", [{}])[0]
+            raw_text: str = candidate.get("content", {}).get("parts", [{}])[0].get("text", "")
 
-    except Exception as e:
-        border = "#" * 70
-        print(f"\n{border}")
-        print("🔥  UNEXPECTED ERROR in generate_mcqs")
-        print(f"TOPIC : {topic}")
-        print(f"TYPE  : {type(e).__name__}")
-        print(f"ERROR : {str(e)}")
-        print(f"{border}\n")
-        raise HTTPException(
-            status_code=503,
-            detail=f"AI Error: {str(e)}",
-        )
+            if not raw_text:
+                 continue
+                 
+            mcqs = _extract_json_array(raw_text)
+
+            if isinstance(mcqs, list) and len(mcqs) > 0:
+                return mcqs
+
+        except Exception as e:
+            logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+            await asyncio.sleep(1)
+            
+    return FALLBACK_MCQS

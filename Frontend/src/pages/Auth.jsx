@@ -7,7 +7,8 @@ export default function Auth() {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    password: ''
+    password: '',
+    exam_track: 'JEE'
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -49,18 +50,19 @@ export default function Auth() {
         const payload = {
           username: formData.username,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          exam_track: formData.exam_track
         };
 
         await api.post('/auth/register', payload);
         
         // Auto switch to login with success message, or auto-login
         // We'll auto-login by calling the login endpoint immediately
-        const params = new URLSearchParams();
-        params.append('username', formData.email);
-        params.append('password', formData.password);
+        const loginParams = new URLSearchParams();
+        loginParams.append('username', formData.email);
+        loginParams.append('password', formData.password);
         
-        const loginResponse = await api.post('/auth/login', params, {
+        const loginResponse = await api.post('/auth/login', loginParams, {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         
@@ -111,18 +113,35 @@ export default function Auth() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             {!isLogin && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold ml-1">Username</label>
-                <input 
-                  type="text" 
-                  name="username"
-                  required={!isLogin}
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  className="bg-surface-container-highest border border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary text-on-surface px-4 py-3 rounded-xl outline-none transition-all placeholder:text-outline/40"
-                  placeholder="e.g. aryabhata_23"
-                />
-              </div>
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold ml-1">Username</label>
+                  <input 
+                    type="text" 
+                    name="username"
+                    required={!isLogin}
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    className="bg-surface-container-highest border border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary text-on-surface px-4 py-3 rounded-xl outline-none transition-all placeholder:text-outline/40"
+                    placeholder="e.g. aryabhata_23"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold ml-1">Exam Target</label>
+                  <select
+                    name="exam_track"
+                    value={formData.exam_track}
+                    onChange={handleInputChange}
+                    className="bg-surface-container-highest border border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary text-on-surface px-4 py-3 rounded-xl outline-none transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="JEE">JEE</option>
+                    <option value="NEET">NEET</option>
+                    <option value="UPSC">UPSC</option>
+                    <option value="GATE">GATE</option>
+                  </select>
+                </div>
+              </>
             )}
             
             <div className="flex flex-col gap-1.5">

@@ -5,6 +5,7 @@ from app.routes import quiz
 from app.routes import doubt
 from app.routes import arena
 from app.routes import mentor
+from app.routes import vault
 from app.core.database import connect_to_mongo, close_mongo_connection
 from contextlib import asynccontextmanager
 
@@ -38,6 +39,7 @@ app.include_router(quiz.router)
 app.include_router(doubt.router)
 app.include_router(arena.router)
 app.include_router(mentor.router)
+app.include_router(vault.router)
 
 @app.get("/")
 async def health_check():

@@ -2,13 +2,49 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
 from app.core.security import get_current_user_ws
 from app.core.database import get_database
 from app.services.arena import manager
-from app.services.llm import generate_mcqs
+from app.services.llm import generate_mcqs, generate_mcqs_from_context, generate_vault_mcqs
 import asyncio
+import uuid
 import logging
+import random
 from bson import ObjectId
 
 router = APIRouter(prefix="/ws", tags=["Arena"])
 logger = logging.getLogger(__name__)
+
+async def simulate_bot_game(match_id: str, real_player_ws: WebSocket, bot_id: str):
+    bot_iq = random.uniform(0.40, 0.85)
+    for _ in range(5):
+        await asyncio.sleep(random.randint(4, 11))
+        
+        if match_id not in manager.active_matches:
+            break
+            
+        match = manager.active_matches[match_id]
+        if match.get("status") == "finished":
+            break
+            
+        if random.random() <= bot_iq:
+            match["players"][bot_id]["score"] += 1
+            
+        match["players"][bot_id]["answer_count"] += 1
+        
+        if match["players"][bot_id]["answer_count"] >= 5:
+            match["players"][bot_id]["completed"] = True
+            
+        try:
+            await real_player_ws.send_json({
+                "type": "OPPONENT_PROGRESS",
+                "opponent_score": match["players"][bot_id]["score"]
+            })
+        except Exception:
+            pass
+            
+        # If bot reaches 5 questions, check if real player is already done
+        if match["players"][bot_id]["completed"] and manager.check_match_complete(match_id):
+            db = get_database()
+            await manager.trigger_endgame(match_id, db)
+            break
 
 @router.websocket("/arena")
 async def websocket_arena(
@@ -29,55 +65,210 @@ async def websocket_arena(
         return
         
     elo = user.get("elo_rating", 1200)
-    user_name = user.get("username", "Competitor")
+    exam_track = user.get("exam_track", "JEE")
     
-    # Try matchmaking logic
-    match_id = await manager.find_match(user_id, elo, websocket)
-    
-    if match_id:
-        match = manager.active_matches[match_id]
+    # Try to intercept VAULT_BOT_MATCH payload immediately
+    initial_data = None
+    try:
+        initial_data = await asyncio.wait_for(websocket.receive_json(), timeout=0.5)
+    except asyncio.TimeoutError:
+        pass
+
+    if initial_data and initial_data.get("type", "").upper() == "VAULT_BOT_MATCH":
+        active_doc_ids = initial_data.get("active_doc_ids", [])
+        match_id = f"VAULT_MATCH_{uuid.uuid4().hex[:8]}"
+        bot_id = "VAULT_BOT"
         
-        # Inform both players that they have matched
+        manager.active_matches[match_id] = {
+            "players": {
+                user_id: {"websocket": websocket, "score": 0, "answer_count": 0, "completed": False, "elo": elo},
+                bot_id: {"websocket": None, "score": 0, "answer_count": 0, "completed": False, "elo": elo}
+            },
+            "status": "ongoing",
+            "exam_track": exam_track,
+            "vault_doc_ids": active_doc_ids
+        }
+        
+        await websocket.send_json({
+            "type": "MATCH_FOUND",
+            "opponent": bot_id
+        })
+        
+        questions = await generate_vault_mcqs(active_doc_ids, exam_track)
+        manager.active_matches[match_id]["questions"] = questions
+        
+        await websocket.send_json({
+            "type": "BATTLE_START",
+            "questions": questions
+        })
+        asyncio.create_task(simulate_bot_game(match_id, websocket, bot_id))
+        is_starter = False
+    else:
+        # Standard Queue Logic
+        match_id = await manager.find_match(user_id, elo, exam_track, websocket)
+        is_starter = False
+        
+        if not match_id:
+            # Wait up to 10 seconds for opponent
+            for _ in range(10):
+                await asyncio.sleep(1)
+                for m_id, m_data in manager.active_matches.items():
+                    if user_id in m_data["players"]:
+                        match_id = m_id
+                        break
+                if match_id:
+                    break
+                
+        if not match_id:
+            # Ghost Bot Setup
+            manager.remove_from_queue(user_id)
+            match_id = manager.create_bot_match(user_id, elo, exam_track, websocket)
+            bot_id = f"PRITHVI_BOT_{exam_track}_{elo}"
+            
+            await websocket.send_json({
+                "type": "MATCH_FOUND",
+                "opponent": bot_id
+            })
+            
+            match = manager.active_matches[match_id]
+            match["status"] = "ongoing"
+            try:
+                SYLLABUS = {
+                    "JEE": {
+                        "Physics": ["Kinematics", "Thermodynamics", "Electromagnetism"],
+                        "Chemistry": ["Chemical Bonding", "Organic Chemistry", "Equilibrium"],
+                        "Math": ["Calculus", "Algebra", "Coordinate Geometry"]
+                    },
+                    "NEET": {
+                        "Physics": ["Mechanics", "Optics", "Modern Physics"],
+                        "Chemistry": ["Physical Chemistry", "Inorganic Chemistry", "Organic Chemistry"],
+                        "Biology": ["Human Physiology", "Genetics", "Plant Diversity"]
+                    },
+                    "UPSC": {
+                        "History": ["Modern Indian History", "Ancient India"],
+                        "Geography": ["Physical Geography", "Indian Geography"],
+                        "Polity": ["Constitution", "Governance"]
+                    },
+                    "GATE": {
+                        "Core": ["Data Structures", "Algorithms", "Operating Systems"],
+                        "Math": ["Engineering Mathematics", "Discrete Math"],
+                        "Aptitude": ["Quantitative Aptitude", "Logical Reasoning"]
+                    }
+                }
+                track = match.get("exam_track", "JEE")
+                track_subjects = SYLLABUS.get(track, SYLLABUS["JEE"])
+                
+                selected_topics = []
+                for subject, topics in track_subjects.items():
+                    selected_topics.append(f"{subject}: {random.choice(topics)}")
+                    
+                mixed_topic_string = " and ".join(selected_topics)
+                questions = await generate_mcqs(mixed_topic_string, track)
+                match["questions"] = questions
+                await websocket.send_json({
+                    "type": "BATTLE_START",
+                    "questions": questions
+                })
+            except Exception as e:
+                logger.error(f"MCQ Generation failed: {e}")
+                await manager.broadcast_to_match(match_id, {
+                    "type": "MATCH_OVER", 
+                    "reason": "error", 
+                    "message": "The AI referee encountered an error generating questions. Please queue again."
+                })
+                manager.active_matches.pop(match_id, None)
+                try:
+                    await websocket.close()
+                except Exception:
+                    pass
+                return
+                
+            asyncio.create_task(simulate_bot_game(match_id, websocket, bot_id))
+        else:
+            is_starter = True
+        
+    if match_id and is_starter:
+        match = manager.active_matches[match_id]
         players_list = list(match["players"].keys())
         p1 = players_list[0]
         p2 = players_list[1]
         
-        # We need to send 'match_found' with opponent info
         try:
             await match["players"][p1]["websocket"].send_json({
-                "type": "match_found",
-                "opponent": f"Player {p2[-4:]}" # Defaulting opponent name to trailing ID chars
+                "type": "MATCH_FOUND",
+                "opponent": f"Player {p2[-4:]}"
             })
-            await match["players"][p2]["websocket"].send_json({
-                "type": "match_found",
-                "opponent": f"Player {p1[-4:]}"
-            })
+            ws_p2 = match["players"][p2]["websocket"]
+            if ws_p2:
+                await ws_p2.send_json({
+                    "type": "MATCH_FOUND",
+                    "opponent": f"Player {p1[-4:]}"
+                })
         except Exception:
             pass
             
-        # Start Battle automatically
         match["status"] = "ongoing"
         try:
-            questions = await generate_mcqs("General Knowledge Arena")
+            SYLLABUS = {
+                "JEE": {
+                    "Physics": ["Kinematics", "Thermodynamics", "Electromagnetism"],
+                    "Chemistry": ["Chemical Bonding", "Organic Chemistry", "Equilibrium"],
+                    "Math": ["Calculus", "Algebra", "Coordinate Geometry"]
+                },
+                "NEET": {
+                    "Physics": ["Mechanics", "Optics", "Modern Physics"],
+                    "Chemistry": ["Physical Chemistry", "Inorganic Chemistry", "Organic Chemistry"],
+                    "Biology": ["Human Physiology", "Genetics", "Plant Diversity"]
+                },
+                "UPSC": {
+                    "History": ["Modern Indian History", "Ancient India"],
+                    "Geography": ["Physical Geography", "Indian Geography"],
+                    "Polity": ["Constitution", "Governance"]
+                },
+                "GATE": {
+                    "Core": ["Data Structures", "Algorithms", "Operating Systems"],
+                    "Math": ["Engineering Mathematics", "Discrete Math"],
+                    "Aptitude": ["Quantitative Aptitude", "Logical Reasoning"]
+                }
+            }
+            track = match.get("exam_track", "JEE")
+            track_subjects = SYLLABUS.get(track, SYLLABUS["JEE"])
+            
+            selected_topics = []
+            for subject, topics in track_subjects.items():
+                selected_topics.append(f"{subject}: {random.choice(topics)}")
+                
+            mixed_topic_string = " and ".join(selected_topics)
+            questions = await generate_mcqs(mixed_topic_string, track)
             match["questions"] = questions
             await manager.broadcast_to_match(match_id, {
-                "type": "battle_start",
+                "type": "BATTLE_START",
                 "questions": questions
             })
         except Exception as e:
             logger.error(f"MCQ Generation failed: {e}")
-            await manager.broadcast_to_match(match_id, {"type": "error", "message": "Failed to start battle."})
-            del manager.active_matches[match_id]
+            await manager.broadcast_to_match(match_id, {
+                "type": "MATCH_OVER", 
+                "reason": "error", 
+                "message": "The AI referee encountered an error generating questions. Please queue again."
+            })
+            manager.active_matches.pop(match_id, None)
+            try:
+                if ws_p1: await ws_p1.close()
+            except Exception: pass
+            try:
+                if ws_p2: await ws_p2.close()
+            except Exception: pass
             return
             
     # Main Real-Time Loop
     try:
         while True:
             data = await websocket.receive_json()
+            msg_type = data.get("type", "").upper()
             
-            if data.get("type") == "answer_submitted":
+            if msg_type == "ANSWER_SUBMITTED":
                 is_correct = data.get("is_correct", False)
-                # Find which match this user is in
                 user_match_id = None
                 for m_id, m_data in manager.active_matches.items():
                     if user_id in m_data["players"]:
@@ -91,29 +282,35 @@ async def websocket_arena(
                         
                     match["players"][user_id]["answer_count"] += 1
                     
-                    if match["players"][user_id]["answer_count"] >= 5: # Assuming game ends at 5
+                    if match["players"][user_id]["answer_count"] >= 5:
                         match["players"][user_id]["completed"] = True
 
-                    # Broadcast opponent_progress explicitly
                     for p_id in match["players"]:
-                        if p_id != user_id:
+                        if p_id != user_id and match["players"][p_id]["websocket"]:
                             opponent_ws = match["players"][p_id]["websocket"]
                             try:
                                 await opponent_ws.send_json({
-                                    "type": "opponent_progress",
-                                    "score": match["players"][user_id]["score"]
+                                    "type": "OPPONENT_PROGRESS",
+                                    "opponent_score": match["players"][user_id]["score"]
                                 })
                             except Exception: pass
                                 
                     if manager.check_match_complete(user_match_id):
-                        await manager.trigger_endgame(user_match_id, db, "NORMAL")
+                        await manager.trigger_endgame(user_match_id, db)
                         break
+                    elif match["players"][user_id]["completed"]:
+                        try:
+                            await websocket.send_json({
+                                "type": "WAITING_FOR_OPPONENT",
+                                "your_score": match["players"][user_id]["score"],
+                                "message": "Waiting for opponent to finish..."
+                            })
+                        except Exception: pass
 
     except WebSocketDisconnect:
         logger.info(f"User {user_id} disconnected.")
         manager.disconnect(websocket, user_id=user_id)
         
-        # Cleanup matches and force abandon if disconnected during combat
         user_match_id = None
         for m_id, m_data in manager.active_matches.items():
             if user_id in m_data["players"]:
@@ -121,5 +318,5 @@ async def websocket_arena(
                 break
         
         if user_match_id:
-            logger.warning(f"Killing match {user_match_id} due to drop")
-            await manager.trigger_endgame(user_match_id, db, "ABANDONED")
+            logger.warning(f"Rage quit detected in {user_match_id}")
+            await manager.handle_disconnect(user_match_id, user_id, db)

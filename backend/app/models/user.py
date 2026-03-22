@@ -1,6 +1,8 @@
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 from typing import Optional
 from app.models.common import PyObjectId
+
+ALLOWED_TRACKS = ["JEE", "NEET", "UPSC", "GATE"]
 
 class UserSchema(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
@@ -10,6 +12,7 @@ class UserSchema(BaseModel):
     role: str = "student"
     elo_rating: int = 1200
     total_xp: int = 0
+    exam_track: str = "JEE"
     
     model_config = ConfigDict(
         populate_by_name=True,
@@ -20,6 +23,14 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+    exam_track: str
+
+    @field_validator('exam_track')
+    @classmethod
+    def validate_exam_track(cls, v):
+        if v not in ALLOWED_TRACKS:
+            raise ValueError(f"exam_track must be one of {ALLOWED_TRACKS}")
+        return v
 
 class Token(BaseModel):
     access_token: str
