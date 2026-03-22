@@ -9,6 +9,7 @@ export default function Sidebar() {
     { name: 'Quiz', icon: 'quiz', path: '/quiz' },
     { name: 'Arena', icon: 'sports_esports', path: '/arena' },
     { name: 'Mentor', icon: 'psychology', path: '/mentor' },
+    { name: 'Proctoring', icon: 'security', path: '/proctored' },
   ];
 
   return (

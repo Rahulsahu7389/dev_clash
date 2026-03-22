@@ -32,6 +32,7 @@ class QuizResponseItem(BaseModel):
     selected_option: str
     is_correct: bool
     approach_feedback: str
+    topic_name: Optional[str] = None
 
 
 class QuizAttemptSchema(BaseModel):
