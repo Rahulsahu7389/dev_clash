@@ -2,8 +2,9 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
 from app.core.security import get_current_user_ws
 from app.core.database import get_database
 from app.services.arena import manager
-from app.services.llm import generate_mcqs
+from app.services.llm import generate_mcqs, generate_mcqs_from_context, generate_vault_mcqs
 import asyncio
+import uuid
 import logging
 import random
 from bson import ObjectId
@@ -66,20 +67,57 @@ async def websocket_arena(
     elo = user.get("elo_rating", 1200)
     exam_track = user.get("exam_track", "JEE")
     
-    # Try matchmaking logic
-    match_id = await manager.find_match(user_id, elo, exam_track, websocket)
-    is_starter = False
-    
-    if not match_id:
-        # Wait up to 10 seconds for opponent
-        for _ in range(10):
-            await asyncio.sleep(1)
-            for m_id, m_data in manager.active_matches.items():
-                if user_id in m_data["players"]:
-                    match_id = m_id
+    # Try to intercept VAULT_BOT_MATCH payload immediately
+    initial_data = None
+    try:
+        initial_data = await asyncio.wait_for(websocket.receive_json(), timeout=0.5)
+    except asyncio.TimeoutError:
+        pass
+
+    if initial_data and initial_data.get("type", "").upper() == "VAULT_BOT_MATCH":
+        active_doc_ids = initial_data.get("active_doc_ids", [])
+        match_id = f"VAULT_MATCH_{uuid.uuid4().hex[:8]}"
+        bot_id = "VAULT_BOT"
+        
+        manager.active_matches[match_id] = {
+            "players": {
+                user_id: {"websocket": websocket, "score": 0, "answer_count": 0, "completed": False, "elo": elo},
+                bot_id: {"websocket": None, "score": 0, "answer_count": 0, "completed": False, "elo": elo}
+            },
+            "status": "ongoing",
+            "exam_track": exam_track,
+            "vault_doc_ids": active_doc_ids
+        }
+        
+        await websocket.send_json({
+            "type": "MATCH_FOUND",
+            "opponent": bot_id
+        })
+        
+        questions = await generate_vault_mcqs(active_doc_ids, exam_track)
+        manager.active_matches[match_id]["questions"] = questions
+        
+        await websocket.send_json({
+            "type": "BATTLE_START",
+            "questions": questions
+        })
+        asyncio.create_task(simulate_bot_game(match_id, websocket, bot_id))
+        is_starter = False
+    else:
+        # Standard Queue Logic
+        match_id = await manager.find_match(user_id, elo, exam_track, websocket)
+        is_starter = False
+        
+        if not match_id:
+            # Wait up to 10 seconds for opponent
+            for _ in range(10):
+                await asyncio.sleep(1)
+                for m_id, m_data in manager.active_matches.items():
+                    if user_id in m_data["players"]:
+                        match_id = m_id
+                        break
+                if match_id:
                     break
-            if match_id:
-                break
                 
         if not match_id:
             # Ghost Bot Setup
@@ -146,8 +184,8 @@ async def websocket_arena(
                 return
                 
             asyncio.create_task(simulate_bot_game(match_id, websocket, bot_id))
-    else:
-        is_starter = True
+        else:
+            is_starter = True
         
     if match_id and is_starter:
         match = manager.active_matches[match_id]

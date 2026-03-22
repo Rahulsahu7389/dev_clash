@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Radar, Swords, Trophy, Loader2, ArrowRight, Timer } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/axios';
 
 // ─── EASILY CONFIGURABLE CONSTANT ───────────────────────────────────────────
@@ -34,6 +34,7 @@ export default function Arena() {
   // most up-to-date value without stale closures.
   const isAdvancing = useRef(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ─── WebSocket Connection & Message Handler ─────────────────────────────────
   useEffect(() => {
@@ -48,6 +49,15 @@ export default function Arena() {
     }).catch(err => console.error(err));
 
     ws.current = new WebSocket(`ws://localhost:8000/ws/arena?token=${token}`);
+
+    ws.current.onopen = () => {
+      if (location.state?.mode === 'vault_bot') {
+        ws.current.send(JSON.stringify({ 
+          type: "VAULT_BOT_MATCH", 
+          active_doc_ids: location.state.activeDocIds 
+        }));
+      }
+    };
 
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
