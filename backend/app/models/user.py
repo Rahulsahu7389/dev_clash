@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 from app.models.common import PyObjectId
 
 ALLOWED_TRACKS = ["JEE", "NEET", "UPSC", "GATE"]
@@ -13,6 +14,11 @@ class UserSchema(BaseModel):
     elo_rating: int = 1200
     total_xp: int = 0
     exam_track: str = "JEE"
+    
+    # NEW Fields for Progression Tracking:
+    exam_date: Optional[datetime] = None
+    master_syllabus_id: Optional[str] = None
+    covered_topics: List[str] = Field(default_factory=list, description="List of topics the user has completed")
     
     model_config = ConfigDict(
         populate_by_name=True,
