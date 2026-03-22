@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Vault from './pages/Vault';
@@ -6,6 +7,7 @@ import Auth from './pages/Auth';
 import QuizArena from './pages/QuizArena';
 import Arena from './pages/Arena';
 import Mentor from './pages/Mentor';
+import ProctoredExam from './components/ProctoredExam';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('access_token');
@@ -17,7 +19,9 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <Router>
+    <>
+      <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' } }} />
+      <Router>
       <Routes>
         <Route path="/auth" element={<Auth />} />
 
@@ -31,11 +35,13 @@ function App() {
           <Route path="quiz" element={<QuizArena />} />
           <Route path="arena" element={<Arena />} />
           <Route path="mentor" element={<Mentor />} />
+          <Route path="proctored" element={<ProctoredExam />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
+    </>
   );
 }
 

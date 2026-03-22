@@ -59,11 +59,13 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {
+        "user_id": str(user["_id"]),
         "username": user.get("username", "Student"),
         "email": user.get("email"),
         "role": user.get("role", "student"),
         "elo_rating": user.get("elo_rating", 1200),
         "total_xp": user.get("total_xp", 0),
-        "exam_track": user.get("exam_track", "JEE")
+        "exam_track": user.get("exam_track", "JEE"),
+        "master_syllabus_id": user.get("master_syllabus_id")
     }
 

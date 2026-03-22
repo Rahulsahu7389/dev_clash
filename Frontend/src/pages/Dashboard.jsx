@@ -3,18 +3,38 @@ import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { motion } from 'framer-motion';
 import { Trophy, Swords, Sparkles, BrainCircuit } from 'lucide-react';
+import OnboardingModal from '../components/OnboardingModal';
+import SyllabusRoadmap from '../components/SyllabusRoadmap';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    api.get('/auth/me')
-      .then(res => setUser(res.data))
-      .catch(err => console.error("Could not fetch user info", err));
+    fetchUser();
   }, []);
+
+  const fetchUser = () => {
+    api.get('/auth/me')
+      .then(res => {
+        setUser(res.data);
+        if (!res.data.master_syllabus_id) {
+          setShowOnboarding(true);
+        } else {
+          setShowOnboarding(false);
+        }
+      })
+      .catch(err => console.error("Could not fetch user info", err));
+  };
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    fetchUser();
+  };
 
   return (
     <>
+      {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
       {/* Top Banner / Hero */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="lg:col-span-2 bg-surface-container-low p-8 rounded-xl relative overflow-hidden flex flex-col justify-between border border-outline-variant/10 shadow-lg">
@@ -130,27 +150,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Activity Feed */}
-        <div className="col-span-12 lg:col-span-8 bg-surface-container-high rounded-xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-outline-variant/10 flex justify-between items-center">
-            <h3 className="font-headline text-lg font-bold">Activity Feed</h3>
-            <button className="text-xs text-primary font-bold hover:underline">View All</button>
-          </div>
-          <div className="p-6 space-y-6">
-            <div className="flex gap-4 group">
-              <div className="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center text-primary border border-outline-variant/20 group-hover:border-primary/50 transition-colors">
-                <span className="material-symbols-outlined">verified</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start">
-                  <p className="text-sm font-bold">Mock Exam Completed</p>
-                  <span className="text-[10px] text-on-surface-variant font-label">2H AGO</span>
-                </div>
-                <p className="text-xs text-on-surface-variant mt-1">Advanced Physics - Section 4. Score: 92/100</p>
-              </div>
-            </div>
-            {/* Add more activity items as needed */}
-          </div>
+        {/* Syllabus Roadmap */}
+        <div className="col-span-12 lg:col-span-8">
+          <SyllabusRoadmap 
+            key={user?.master_syllabus_id || 'uninitialized'}
+            onTriggerOnboarding={() => setShowOnboarding(true)} 
+          />
         </div>
 
         {/* Urgency & Arena Integration */}

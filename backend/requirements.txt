@@ -13,3 +13,4 @@ httpx
 pymupdf
 chromadb
 langchain-text-splitters
+groq
