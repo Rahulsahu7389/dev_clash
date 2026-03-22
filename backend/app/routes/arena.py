@@ -8,6 +8,8 @@ import uuid
 import logging
 import random
 from bson import ObjectId
+from datetime import datetime, timezone
+from app.utils.srs import calculate_next_review
 
 router = APIRouter(prefix="/ws", tags=["Arena"])
 logger = logging.getLogger(__name__)
@@ -74,7 +76,38 @@ async def websocket_arena(
     except asyncio.TimeoutError:
         pass
 
-    if initial_data and initial_data.get("type", "").upper() == "VAULT_BOT_MATCH":
+    if initial_data and initial_data.get("type", "").upper() == "TOPIC_BOT_MATCH":
+        target_topic = initial_data.get("topic", "General Science")
+        match_id = f"TOPIC_MATCH_{uuid.uuid4().hex[:8]}"
+        bot_id = "SRS_BOT"
+        
+        manager.active_matches[match_id] = {
+            "players": {
+                user_id: {"websocket": websocket, "score": 0, "answer_count": 0, "completed": False, "elo": elo},
+                bot_id: {"websocket": None, "score": 0, "answer_count": 0, "completed": False, "elo": elo}
+            },
+            "status": "ongoing",
+            "exam_track": exam_track,
+            "target_topic": target_topic,   # <--- ADD THIS
+            "is_srs_match": True            # <--- ADD THIS
+        }
+        
+        await websocket.send_json({
+            "type": "MATCH_FOUND",
+            "opponent": bot_id
+        })
+        
+        # Generate questions directly from the topic string!
+        questions = await generate_mcqs(target_topic, exam_track)
+        manager.active_matches[match_id]["questions"] = questions
+        
+        await websocket.send_json({
+            "type": "BATTLE_START",
+            "questions": questions
+        })
+        asyncio.create_task(simulate_bot_game(match_id, websocket, bot_id))
+        is_starter = False
+    elif initial_data and initial_data.get("type", "").upper() == "VAULT_BOT_MATCH":
         active_doc_ids = initial_data.get("active_doc_ids", [])
         match_id = f"VAULT_MATCH_{uuid.uuid4().hex[:8]}"
         bot_id = "VAULT_BOT"
@@ -284,6 +317,36 @@ async def websocket_arena(
                     
                     if match["players"][user_id]["answer_count"] >= 5:
                         match["players"][user_id]["completed"] = True
+
+                    # --- ATOMIC INJECTION: SRS CURVE UPDATE ---
+                    if match.get("is_srs_match") and match.get("target_topic"):
+                        topic = match["target_topic"]
+                        score = match["players"][user_id]["score"]
+                        quality = int((score / 5.0) * 5) # Convert 0-5 score to SM-2 quality factor
+                        
+                        # Fetch existing SRS record
+                        srs_record = await db.srs_records.find_one({"user_id": user_id, "reference_id": topic})
+                        cf = srs_record["ease_factor"] if srs_record else 2.5
+                        interval = srs_record["interval"] if srs_record else 0
+                        
+                        # Calculate new curve
+                        srs_result = calculate_next_review(quality, cf, interval)
+                        
+                        await db.srs_records.update_one(
+                            {"user_id": user_id, "reference_id": topic},
+                            {
+                                "$set": {
+                                    "ease_factor": srs_result["ease_factor"],
+                                    "interval": srs_result["interval"],
+                                    "next_review_date": srs_result["next_review_date"],
+                                    "last_reviewed_date": datetime.now(timezone.utc),
+                                    "record_type": "topic"
+                                },
+                                "$inc": {"repetition_count": 1}
+                            },
+                            upsert=True
+                        )
+                    # --- END INJECTION ---
 
                     for p_id in match["players"]:
                         if p_id != user_id and match["players"][p_id]["websocket"]:

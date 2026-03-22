@@ -56,6 +56,11 @@ export default function Arena() {
           type: "VAULT_BOT_MATCH", 
           active_doc_ids: location.state.activeDocIds 
         }));
+      } else if (location.state?.mode === 'topic_bot') {
+        ws.current.send(JSON.stringify({ 
+          type: "TOPIC_BOT_MATCH", 
+          topic: location.state.topic 
+        }));
       }
     };
 

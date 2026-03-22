@@ -85,7 +85,8 @@
 
 from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
 from typing import List
-from datetime import datetime
+from datetime import datetime, timedelta
+from app.models.srs import SRSRecordSchema
 from pydantic import BaseModel
 from app.core.dependencies import get_current_user
 from app.services.rag import (
@@ -178,12 +179,75 @@ async def upload_document(file: UploadFile = File(...), current_user: dict = Dep
 @router.post("/ask")
 async def ask_question(request: AskRequest, current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
-    return await generate_vault_answer(
+    
+    answer_result = await generate_vault_answer(
         question=request.question,
         active_doc_ids=request.active_doc_ids,
         socratic_mode=request.socratic_mode,
         user_id=user_id
     )
+    
+    db = get_database()
+    now = datetime.utcnow()
+    
+    # 2. Intercept Vault Chats: fetch topics associated with active_doc_ids
+    if request.active_doc_ids:
+        source_records = await db.source_topics.find({
+            "source_id": {"$in": request.active_doc_ids},
+            "user_id": ObjectId(user_id)
+        }).to_list(length=None)
+        
+        topics_to_update = set()
+        for record in source_records:
+            for topic in record.get("topics", []):
+                topics_to_update.add(topic)
+                
+        # Update srs_records for each topic
+        for topic in topics_to_update:
+            existing_record = await db.srs_records.find_one({
+                "user_id": user_id,
+                "reference_id": topic,
+                "record_type": "topic"
+            })
+            
+            if existing_record:
+                await db.srs_records.update_one(
+                    {"_id": existing_record["_id"]},
+                    {
+                        "$set": {
+                            "last_reviewed_date": now
+                        },
+                        "$inc": {
+                            "repetition_count": 1
+                        }
+                    }
+                )
+            else:
+                new_record = SRSRecordSchema(
+                    user_id=user_id,
+                    reference_id=topic,
+                    record_type="topic",
+                    repetition_count=1,
+                    interval=1,
+                    ease_factor=2.5,
+                    last_reviewed_date=now,
+                    next_review_date=now + timedelta(days=1)
+                )
+                
+                await db.srs_records.insert_one(new_record.model_dump(by_alias=True, exclude_none=True))
+                
+    # 3. Log Chat History
+    chat_log = {
+        "user_id": ObjectId(user_id),
+        "question": request.question,
+        "answer": answer_result,
+        "active_doc_ids": request.active_doc_ids,
+        "socratic_mode": request.socratic_mode,
+        "timestamp": now
+    }
+    await db.vault_chat_logs.insert_one(chat_log)
+    
+    return answer_result
 
 @router.post("/generate-practice")
 async def generate_practice(request: PracticeRequest, current_user: dict = Depends(get_current_user)):

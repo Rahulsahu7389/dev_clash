@@ -8,6 +8,7 @@ import QuizArena from './pages/QuizArena';
 import Arena from './pages/Arena';
 import Mentor from './pages/Mentor';
 import ProctoredExam from './components/ProctoredExam';
+import Revision from './pages/Revision';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('access_token');
@@ -36,6 +37,7 @@ function App() {
           <Route path="arena" element={<Arena />} />
           <Route path="mentor" element={<Mentor />} />
           <Route path="proctored" element={<ProctoredExam />} />
+          <Route path="revision" element={<Revision />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

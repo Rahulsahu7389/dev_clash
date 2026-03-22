@@ -668,6 +668,7 @@ async def extract_pdf_topics(pdf_text: str) -> list[str]:
     return []
 
 async def generate_vault_mcqs(doc_ids: list[str], track: str) -> list[dict]:
+    if not doc_ids: return FALLBACK_MCQS
     # Query ChromaDB to get all text chunks for the checked PDFs
     results = collection.get(where={"doc_id": {"$in": doc_ids}})
     

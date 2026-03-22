@@ -6,6 +6,7 @@ export default function Sidebar() {
   const navItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/' },
     { name: 'Vault', icon: 'inventory_2', path: '/vault' },
+    { name: 'Revision', icon: 'monitoring', path: '/revision' },
     { name: 'Quiz', icon: 'quiz', path: '/quiz' },
     { name: 'Arena', icon: 'sports_esports', path: '/arena' },
     { name: 'Mentor', icon: 'psychology', path: '/mentor' },

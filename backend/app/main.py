@@ -8,6 +8,7 @@ from app.routes import mentor
 from app.routes import vault
 from app.routes import syllabus
 from app.routes import mock_test
+from app.routes import srs
 from app.core.database import connect_to_mongo, close_mongo_connection
 from contextlib import asynccontextmanager
 
@@ -51,6 +52,7 @@ app.include_router(mentor.router)
 app.include_router(vault.router)
 app.include_router(syllabus.router)
 app.include_router(mock_test.router)
+app.include_router(srs.router)
 
 @app.get("/")
 async def health_check():
