@@ -1,27 +1,28 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { ShieldAlert, Maximize, AlertTriangle, Timer, CheckCircle, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { ShieldAlert, Maximize, AlertTriangle, Timer, CheckCircle, ArrowRight, ArrowLeft, Loader2, Play } from 'lucide-react';
 import api from '../api/axios';
 import * as faceapi from '@vladmandic/face-api';
 
 export default function ProctoredExam() {
   const navigate = useNavigate();
-  
+
   // 1. State Initialization
   const [user, setUser] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const [isExamStarted, setIsExamStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
   const [warnings, setWarnings] = useState(0);
-  
+
   const [isTerminated, setIsTerminated] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const [toastMessage, setToastMessage] = useState(null);
 
   // 2. Refs
@@ -38,7 +39,7 @@ export default function ProctoredExam() {
       try {
         const userRes = await api.get('/auth/me');
         setUser(userRes.data);
-        
+
         const examRes = await api.get(`/mock-test/generate/${userRes.data.user_id || 'me'}`);
         if (examRes.data && examRes.data.questions) {
           setQuestions(examRes.data.questions);
@@ -56,20 +57,19 @@ export default function ProctoredExam() {
     return () => cleanupExam();
   }, []);
 
-  // 4. Load Model & Start Camera
+  // 4. Load Models implicitly
   useEffect(() => {
-    const loadModelsAndStartCamera = async () => {
+    const loadModels = async () => {
       try {
         await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
         setIsModelLoaded(true);
-        startVideo();
       } catch (e) {
-        console.error("Failed to load models. Make sure /models exists in public folder.", e);
+        console.error("Failed to load models.", e);
       }
     };
 
     if (!isLoading) {
-       loadModelsAndStartCamera();
+      loadModels();
     }
   }, [isLoading]);
 
@@ -86,7 +86,7 @@ export default function ProctoredExam() {
   const cleanupExam = () => {
     if (trackIntervalRef.current) clearInterval(trackIntervalRef.current);
     if (timerRef.current) clearInterval(timerRef.current);
-    
+
     if (videoRef.current && videoRef.current.srcObject) {
       videoRef.current.srcObject.getTracks().forEach(track => track.stop());
     }
@@ -97,12 +97,53 @@ export default function ProctoredExam() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  const incrementWarning = useCallback((msg) => {
+    setWarnings(prev => {
+      const next = prev + 1;
+      warningsRef.current = next;
+      return next;
+    });
+    showWarningToast(msg);
+  }, []);
+
+  // --- API EVENT LISTENERS ---
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isExamStarted && !isTerminated) {
+        incrementWarning("⚠️ WARNING: Tab switching is strictly prohibited!");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [isExamStarted, isTerminated, incrementWarning]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isExamStarted && !isTerminated) {
+        incrementWarning("⚠️ WARNING: Please remain in Fullscreen mode!");
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [isExamStarted, isTerminated, incrementWarning]);
+
+  // --- UNIFIED ENFORCEMENT ---
+  useEffect(() => {
+    if (warnings >= 3 && !isTerminated) {
+      isTerminatedRef.current = true;
+      setIsTerminated(true);
+      submitExam();
+    }
+  }, [warnings, isTerminated]);
+
+
+  // --- FACE DETECTION LOOP ---
   const handleVideoPlay = () => {
     trackIntervalRef.current = setInterval(async () => {
-      if (!videoRef.current || isTerminatedRef.current) return;
+      if (!videoRef.current || isTerminatedRef.current || !isExamStarted) return;
 
       const detection = await faceapi.detectSingleFace(
-        videoRef.current, 
+        videoRef.current,
         new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 })
       );
 
@@ -110,20 +151,7 @@ export default function ProctoredExam() {
         if (!lookAwayTimer.current) {
           lookAwayTimer.current = Date.now();
         } else if (Date.now() - lookAwayTimer.current > 4000) {
-          setWarnings(prev => {
-            const next = prev + 1;
-            warningsRef.current = next;
-            return next;
-          });
-          
-          showWarningToast("⚠️ WARNING: Please look directly at the screen!");
-          
-          if (warningsRef.current >= 3) {
-            isTerminatedRef.current = true;
-            setIsTerminated(true);
-            submitExam();
-          }
-          
+          incrementWarning("⚠️ WARNING: Please look directly at the screen!");
           lookAwayTimer.current = null;
         }
       } else {
@@ -134,7 +162,7 @@ export default function ProctoredExam() {
 
   // 5. Timer Logic
   useEffect(() => {
-    if (timeLeft !== null && timeLeft > 0 && !isTerminated) {
+    if (timeLeft !== null && timeLeft > 0 && isExamStarted && !isTerminated) {
       timerRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -147,15 +175,32 @@ export default function ProctoredExam() {
       }, 1000);
     }
     return () => clearInterval(timerRef.current);
-  }, [timeLeft, isTerminated]);
+  }, [timeLeft, isExamStarted, isTerminated]);
+
+  const handleStartExam = async () => {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (e) {
+      toast.error("Fullscreen required.");
+      return;
+    }
+    setIsExamStarted(true);
+    startVideo();
+  };
 
   // 6. Submit Logic
   const submitExam = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    
+
+    if (document.fullscreenElement && document.exitFullscreen) {
+      try { await document.exitFullscreen(); } catch (e) {}
+    }
+
     cleanupExam();
-    
+
     let score = 0;
     const responses = questions.map((q, idx) => {
       const selected = answers[idx];
@@ -209,6 +254,25 @@ export default function ProctoredExam() {
     );
   }
 
+  if (!isExamStarted) {
+    return (
+      <div className="h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-center">
+        <ShieldAlert className="w-20 h-20 text-primary mb-6 animate-pulse" />
+        <h1 className="text-4xl font-headline font-bold text-white mb-4">Proctored Environment Ready</h1>
+        <p className="text-slate-300 max-w-xl text-lg mb-8 leading-relaxed">
+           You are about to enter a highly restricted, AI-Proctored environment.
+           Failure to maintain <strong>Fullscreen</strong>, switching <strong>Tabs</strong>, or <strong>looking away</strong> securely will trigger automated warnings.
+        </p>
+        <button
+          onClick={handleStartExam}
+          className="flex items-center gap-3 px-10 py-5 bg-primary hover:bg-primary/90 text-white font-bold rounded-2xl shadow-[0_0_30px_rgba(var(--primary),0.4)] transition-all hover:scale-105"
+        >
+          <Play className="w-6 h-6" /> Start Exam Securely
+        </button>
+      </div>
+    );
+  }
+
   if (isTerminated) {
     return (
       <div className="fixed inset-0 z-[2000] bg-red-950/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center">
@@ -216,8 +280,8 @@ export default function ProctoredExam() {
         <h1 className="text-4xl font-headline font-bold text-white mb-4">Exam Terminated</h1>
         <h2 className="text-2xl font-bold text-red-300 mb-6 uppercase tracking-widest">Academic Integrity Breach</h2>
         <p className="text-slate-200 max-w-lg text-lg leading-relaxed">
-           Our AI tracking system detected multiple instances of face absence or extreme head tilt. 
-           Your attempt has been forcefully submitted for audit.
+          Our AI tracking system detected multiple instances of face absence, explicit tab switching, or exiting fullscreen.
+          Your attempt has been forcefully submitted for audit.
         </p>
         <button onClick={() => navigate('/')} className="mt-10 px-8 py-3 bg-white text-red-900 font-bold rounded-xl hover:bg-slate-200 transition-all">
           Return to Hub
@@ -232,10 +296,10 @@ export default function ProctoredExam() {
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col relative">
       {/* WebCam View */}
       <div className="fixed top-6 right-6 w-40 h-32 z-50 rounded-xl overflow-hidden border-2 border-primary shadow-[0_0_20px_rgba(var(--primary),0.3)] bg-slate-800">
-        <video 
-          ref={videoRef} 
-          autoPlay 
-          muted 
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
           onPlay={handleVideoPlay}
           className="w-full h-full object-cover -scale-x-100"
         />
@@ -263,7 +327,7 @@ export default function ProctoredExam() {
             <AlertTriangle className="w-5 h-5" />
             <span>Flags: {warnings}/3</span>
           </div>
-          
+
           {/* Timer */}
           <div className={`flex items-center gap-2 px-6 py-2 rounded-xl border font-mono text-xl ${timeLeft < 30 ? 'bg-red-900 text-red-200 border-red-500' : 'bg-slate-950 text-emerald-400 border-emerald-500/30'}`}>
             <Timer className="w-5 h-5" />
@@ -277,8 +341,8 @@ export default function ProctoredExam() {
         <div className="w-full bg-slate-800 rounded-3xl p-10 shadow-3xl border border-slate-700 relative overflow-hidden min-h-[400px]">
           {/* Progress Bar */}
           <div className="absolute top-0 left-0 h-1 bg-primary/20 w-full">
-            <div 
-              className="h-full bg-primary transition-all duration-500 ease-out" 
+            <div
+              className="h-full bg-primary transition-all duration-500 ease-out"
               style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
             />
           </div>
@@ -292,20 +356,18 @@ export default function ProctoredExam() {
               <button
                 key={i}
                 onClick={() => handleOptionSelect(option)}
-                className={`flex items-center gap-4 p-5 rounded-2xl border-2 text-left transition-all relative group ${
-                  answers[currentIdx] === option 
-                  ? 'bg-primary/10 border-primary text-white shadow-[0_0_20px_rgba(var(--primary),0.2)]' 
-                  : 'bg-slate-900/50 border-slate-700 hover:border-slate-500 text-slate-300'
-                }`}
+                className={`flex items-center gap-4 p-5 rounded-2xl border-2 text-left transition-all relative group ${answers[currentIdx] === option
+                    ? 'bg-primary/10 border-primary text-white shadow-[0_0_20px_rgba(var(--primary),0.2)]'
+                    : 'bg-slate-900/50 border-slate-700 hover:border-slate-500 text-slate-300'
+                  }`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${
-                  answers[currentIdx] === option ? 'bg-primary text-white' : 'bg-slate-800 text-slate-500 group-hover:text-slate-300'
-                }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${answers[currentIdx] === option ? 'bg-primary text-white' : 'bg-slate-800 text-slate-500 group-hover:text-slate-300'
+                  }`}>
                   {String.fromCharCode(65 + i)}
                 </div>
                 <span className="text-lg">{option}</span>
                 {answers[currentIdx] === option && (
-                   <CheckCircle className="w-5 h-5 text-primary absolute right-5" />
+                  <CheckCircle className="w-5 h-5 text-primary absolute right-5" />
                 )}
               </button>
             ))}
@@ -314,7 +376,7 @@ export default function ProctoredExam() {
 
         {/* Footer Navigation */}
         <div className="flex justify-between w-full mt-10">
-          <button 
+          <button
             disabled={currentIdx === 0}
             onClick={() => setCurrentIdx(prev => prev - 1)}
             className="flex items-center gap-2 px-8 py-3 rounded-xl bg-slate-800 text-slate-400 font-bold hover:bg-slate-700 transition-all disabled:opacity-0"
@@ -323,15 +385,25 @@ export default function ProctoredExam() {
           </button>
 
           {currentIdx === questions.length - 1 ? (
-            <button 
+            <button
               onClick={submitExam}
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl shadow-xl shadow-emerald-900/40 transition-all group scale-110"
+              className={`flex items-center gap-2 px-10 py-4 font-bold rounded-2xl shadow-xl transition-all scale-110 ${
+                 isSubmitting 
+                 ? 'bg-slate-700 text-slate-400 cursor-not-allowed' 
+                 : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/40'
+               }`}
             >
-              {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Complete & Submit'}
+              {isSubmitting ? (
+                 <>
+                   <Loader2 className="w-6 h-6 animate-spin" /> Submitting
+                 </>
+               ) : (
+                 'Complete & Submit'
+               )}
             </button>
           ) : (
-            <button 
+            <button
               onClick={() => setCurrentIdx(prev => prev + 1)}
               className="flex items-center gap-2 px-8 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all shadow-lg shadow-primary/20"
             >
@@ -343,7 +415,7 @@ export default function ProctoredExam() {
 
       {/* Warning Overlay (Flash Effect) */}
       <div className={`fixed inset-0 pointer-events-none z-50 transition-opacity duration-300 bg-red-600/10 ${warnings > 0 ? 'opacity-100' : 'opacity-0'}`} />
-      
+
       {/* Custom Toast Message */}
       {toastMessage && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] bg-red-600 text-white font-bold px-8 py-4 rounded-2xl shadow-2xl animate-bounce border-2 border-white">
