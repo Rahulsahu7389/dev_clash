@@ -36,9 +36,15 @@ function App() {
           <Route path="quiz" element={<QuizArena />} />
           <Route path="arena" element={<Arena />} />
           <Route path="mentor" element={<Mentor />} />
-          <Route path="proctored" element={<ProctoredExam />} />
           <Route path="revision" element={<Revision />} />
         </Route>
+
+        {/* Proctored Exam (No Sidebar/Header) */}
+        <Route path="/proctored" element={
+          <ProtectedRoute>
+            <ProctoredExam />
+          </ProtectedRoute>
+        } />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
