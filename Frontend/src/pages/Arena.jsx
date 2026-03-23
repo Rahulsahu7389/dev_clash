@@ -61,6 +61,11 @@ export default function Arena() {
           type: "TOPIC_BOT_MATCH", 
           topic: location.state.topic 
         }));
+      } else if (location.state?.mode === 'adaptive_bot') {
+        ws.current.send(JSON.stringify({ 
+          type: "ADAPTIVE_BOT_MATCH", 
+          topic: location.state.topic 
+        }));
       }
     };
 
@@ -114,6 +119,7 @@ export default function Arena() {
         question_idx: currentQuestionIndex,
         is_correct: false,
         timed_out: timedOut,
+        time_taken: timedOut ? 30 : 30,
       }));
     }
 
@@ -177,6 +183,8 @@ export default function Arena() {
 
     if (correct) setPlayerScore((prev) => prev + 1);
 
+    const timeTaken = 30 - timeLeft;
+
     // Send standard WS payload
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({
@@ -184,6 +192,7 @@ export default function Arena() {
         question_idx: currentQuestionIndex,
         is_correct: correct,
         timed_out: false,
+        time_taken: timeTaken,
       }));
     }
 

@@ -11,6 +11,7 @@ from app.routes import mock_test
 from app.routes import srs
 from app.routes import planner
 from app.routes import dashboard
+from app.routes import adaptive
 from app.core.database import connect_to_mongo, close_mongo_connection
 from contextlib import asynccontextmanager
 
@@ -57,6 +58,7 @@ app.include_router(mock_test.router)
 app.include_router(srs.router)
 app.include_router(planner.router)
 app.include_router(dashboard.router)
+app.include_router(adaptive.router)
 
 @app.get("/")
 async def health_check():

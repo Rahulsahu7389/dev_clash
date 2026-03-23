@@ -755,7 +755,8 @@ async def generate_daily_plan(days_remaining: int, pending_topics: list[str], ur
         f"Days Remaining: {days_remaining}\n"
         f"Pending Syllabus: {pending_topics}\n"
         f"Urgent Decaying Memory Topics: {urgent_srs}\n\n"
-        "Generate a strictly optimal daily mission matching the exact JSON array schema."
+        "Generate a strictly optimal daily mission matching the exact JSON array schema. "
+        "DO NOT use markdown formatting. DO NOT wrap the response in ```json. Output ONLY a raw, valid JSON array."
     )
     
     schema = {
@@ -790,21 +791,78 @@ async def generate_daily_plan(days_remaining: int, pending_topics: list[str], ur
                 response = await client.post(GEMINI_URL, json=payload)
             if response.status_code == 200:
                 data = response.json()
+                # --- EXTREME JSON EXTRACTION ---
                 raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                
                 import re
+                # Use Regex to find the first '[' and last ']' and grab everything in between
                 match = re.search(r'\[.*\]', raw_text, re.DOTALL)
+                
                 if match:
-                    raw_text = match.group(0)
-                plan = json.loads(raw_text)
-                if isinstance(plan, list):
-                    return plan
+                    clean_json_string = match.group(0)
+                    try:
+                        import json
+                        mission_plan = json.loads(clean_json_string)
+                        return mission_plan
+                    except Exception as json_e:
+                        print(f"--- [JSON PARSE FAILED AFTER REGEX] ---")
+                        print(f"Regex Extracted: {clean_json_string}")
+                        print(f"Error: {str(json_e)}")
+                else:
+                    print(f"--- [NO JSON ARRAY FOUND IN GEMINI RESPONSE] ---")
+                    print(f"Raw Output: {raw_text}")
+                    
         except Exception as e:
-            logger.error(f"Planner attempt {attempt+1} failed: {e}")
+            print(f"--- [LLM NETWORK/STRUCTURE FAILED] ---")
+            print(f"Gemini Raw Text: {response.text if 'response' in locals() else 'No Response'}")
+            print(f"Error: {str(e)}")
+            import asyncio
             await asyncio.sleep(1)
             
     return [{
-        "task_title": "Study Pending Topic",
-        "reasoning": "Fallback mission tracking algorithm.",
+        "task_title": "Review Default Topic",
+        "reasoning": "AI generated invalid format. Reverting to safe default.",
         "action_type": "vault_study",
-        "target_topic": pending_topics[0] if pending_topics else "General Study"
+        "target_topic": pending_topics[0] if pending_topics else "General Concepts"
     }]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW: Adaptive PYQ Generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def generate_adaptive_pyqs(topic: str, past_mistakes: list[str], exam_track: str) -> list[dict]:
+    system_instruction = (
+        f"You are an expert examiner for the {exam_track} exam. The student is weak at '{topic}'. "
+        f"Specifically, they previously struggled with these concepts/questions: {past_mistakes}. "
+        f"Generate exactly 5 new MCQs that test this exact weakness. You MUST format these questions "
+        f"to mimic the pattern and difficulty of official Past Year Questions (PYQs) for {exam_track}. "
+        f"Output ONLY a JSON array of 5 objects: {{'question', 'options', 'correct_answer', 'explanation'}}."
+    )
+    
+    payload = {
+        "system_instruction": {"parts": [{"text": system_instruction}]},
+        "contents": [{"role": "user", "parts": [{"text": "Format the output STRICTLY as a JSON array of 5 MCQ objects."}]}],
+        "generationConfig": {
+            "temperature": 0.5,
+            "responseMimeType": "application/json",
+            "responseSchema": RESPONSE_SCHEMA
+        }
+    }
+    
+    import asyncio
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(GEMINI_URL, json=payload, headers={"Content-Type": "application/json"})
+            if response.status_code == 200:
+                data = response.json()
+                raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                
+                mcqs = _extract_json_array(raw_text)
+                if isinstance(mcqs, list) and len(mcqs) > 0:
+                    return mcqs
+        except Exception as e:
+            logger.warning(f"Adaptive attempt {attempt+1} failed: {e}")
+            await asyncio.sleep(1)
+            
+    return FALLBACK_MCQS

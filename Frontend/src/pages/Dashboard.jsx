@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { motion } from 'framer-motion';
-import { Trophy, Swords, Sparkles, BrainCircuit, Activity, BookOpen, AlertCircle } from 'lucide-react';
+import { Trophy, Swords, Sparkles, BrainCircuit, Activity, BookOpen, AlertCircle, Timer } from 'lucide-react';
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer
 } from 'recharts';
@@ -29,6 +29,7 @@ export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
   const [mission, setMission] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [weaknesses, setWeaknesses] = useState([]);
   const [masterSyllabusId, setMasterSyllabusId] = useState(null); 
   
   const navigate = useNavigate();
@@ -58,6 +59,11 @@ export default function Dashboard() {
     api.get('/planner/daily')
       .then(res => setMission(res.data))
       .catch(err => console.error("Planner logic failed", err));
+      
+    // 4. Fetch Weaknesses for Adaptive Practice
+    api.get('/adaptive/weaknesses')
+      .then(res => setWeaknesses(res.data))
+      .catch(err => console.error("Adaptive logic failed", err));
   };
 
   const handleOnboardingComplete = () => {
@@ -244,7 +250,7 @@ export default function Dashboard() {
               <Activity className="text-cyan-400 w-10 h-10" />
             </div>
             <p className="text-sm text-white/50 font-medium relative z-10 mb-4">
-              Your Antigravity Matrix is active.
+              Your Vault is active.
             </p>
             <button onClick={() => navigate('/vault')} className="w-full relative z-10 font-bold text-lg text-white bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-4 rounded-2xl shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:shadow-[0_0_40px_rgba(34,211,238,0.6)] transition-all transform hover:-translate-y-1">
               Process New Material
@@ -346,8 +352,48 @@ export default function Dashboard() {
               <p className="text-sm text-white/50 font-medium">Keep your synaptic streaks alive.</p>
             </div>
           </motion.div>
-        
         </div>
+        
+        {/* Targeted Weakness Remediation */}
+        {weaknesses.length > 0 && (
+          <motion.div variants={cardVariants} className="bg-[#0A0F1C]/60 backdrop-blur-[20px] border border-white/10 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-rose-500/20 rounded-xl border border-rose-500/30">
+                <AlertCircle className="w-6 h-6 text-rose-400" />
+              </div>
+              <h2 className="font-headline text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-rose-400 drop-shadow-sm">
+                Targeted Weakness Remediation
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {weaknesses.map((w, idx) => (
+                <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col items-start gap-4 hover:border-rose-500/30 transition-all duration-300 relative overflow-hidden group shadow-lg">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-[50px] -mr-16 -mt-16 pointer-events-none group-hover:bg-rose-500/20 transition-all"></div>
+                  
+                  <h3 className="font-headline font-bold text-white leading-snug drop-shadow-sm text-lg relative z-10 w-full truncate">
+                    {w.topic}
+                  </h3>
+                  
+                  <div className="flex flex-col gap-2 w-full relative z-10">
+                    <span className="text-xs font-bold text-rose-300 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-lg text-center flex items-center justify-center gap-2">
+                       <Timer className="w-4 h-4" /> Avg Time: {w.avg_time_taken}s
+                    </span>
+                    <span className="text-xs font-bold text-orange-300 bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-lg text-center font-body flex justify-center items-center">
+                      <Swords className="w-3 h-3 mr-1" /> {w.error_count} Critical Errors
+                    </span>
+                  </div>
+                  
+                  <button 
+                    onClick={() => navigate('/arena', { state: { topic: w.topic, mode: 'adaptive_bot' } })}
+                    className="w-full mt-auto bg-gradient-to-r from-rose-500/20 to-orange-500/20 hover:from-rose-500 hover:to-orange-500 border border-rose-500/30 hover:border-rose-400 text-rose-200 hover:text-white font-bold py-3 rounded-xl transition-all shadow-[0_0_15px_rgba(244,63,94,0.15)] group-hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] text-sm uppercase tracking-wider relative z-10"
+                  >
+                    Generate PYQ Remediation
+                  </button>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Global Syllabus Tracking Map */}
         <motion.div variants={cardVariants}>

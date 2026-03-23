@@ -2,7 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
 from app.core.security import get_current_user_ws
 from app.core.database import get_database
 from app.services.arena import manager
-from app.services.llm import generate_mcqs, generate_mcqs_from_context, generate_vault_mcqs
+from app.services.llm import generate_mcqs, generate_mcqs_from_context, generate_vault_mcqs, generate_adaptive_pyqs
 import asyncio
 import uuid
 import logging
@@ -99,6 +99,45 @@ async def websocket_arena(
         
         # Generate questions directly from the topic string!
         questions = await generate_mcqs(target_topic, exam_track)
+        manager.active_matches[match_id]["questions"] = questions
+        
+        await websocket.send_json({
+            "type": "BATTLE_START",
+            "questions": questions
+        })
+        asyncio.create_task(simulate_bot_game(match_id, websocket, bot_id))
+        is_starter = False
+    elif initial_data and initial_data.get("type", "").upper() == "ADAPTIVE_BOT_MATCH":
+        target_topic = initial_data.get("topic", "General")
+        
+        # Fetch past mistakes for context
+        mistakes_cursor = db.mistake_logs.find({
+            "user_id": {"$in": [user_id, ObjectId(user_id)]}, 
+            "target_topics": target_topic
+        }).sort("created_at", -1).limit(3)
+        mistakes = await mistakes_cursor.to_list(length=3)
+        mistake_texts = [m.get("question", "") for m in mistakes]
+
+        match_id = f"ADAPTIVE_{uuid.uuid4().hex[:8]}"
+        bot_id = "PYQ_MASTER_BOT"
+
+        manager.active_matches[match_id] = {
+            "players": {
+                user_id: {"websocket": websocket, "score": 0, "answer_count": 0, "completed": False, "elo": elo},
+                bot_id: {"websocket": None, "score": 0, "answer_count": 0, "completed": False, "elo": elo}
+            },
+            "status": "ongoing",
+            "exam_track": exam_track,
+            "target_topic": target_topic,
+            "is_srs_match": True
+        }
+        
+        await websocket.send_json({
+            "type": "MATCH_FOUND",
+            "opponent": bot_id
+        })
+        
+        questions = await generate_adaptive_pyqs(target_topic, mistake_texts, exam_track)
         manager.active_matches[match_id]["questions"] = questions
         
         await websocket.send_json({
@@ -302,6 +341,8 @@ async def websocket_arena(
             
             if msg_type == "ANSWER_SUBMITTED":
                 is_correct = data.get("is_correct", False)
+                time_taken = data.get("time_taken", 0)
+                current_q_idx = data.get("question_idx", 0)
                 user_match_id = None
                 for m_id, m_data in manager.active_matches.items():
                     if user_id in m_data["players"]:
@@ -313,6 +354,26 @@ async def websocket_arena(
                     if is_correct:
                         match["players"][user_id]["score"] += 1
                         
+                    # --- ATOMIC INJECTION: WEAKNESS DETECTION ---
+                    # If they got it wrong OR took more than 20 seconds, log it as a weakness
+                    if not is_correct or time_taken > 20:
+                        qs = match.get("questions", [])
+                        current_q = qs[current_q_idx] if qs and current_q_idx < len(qs) else {}
+                        q_text = current_q.get("question", "Unknown Question")
+                        target_topic = match.get("target_topic", "General")
+                        
+                        asyncio.create_task(db.mistake_logs.insert_one({
+                            "user_id": user_id,
+                            "match_id": user_match_id,
+                            "target_topics": [target_topic],
+                            "question": q_text,
+                            "time_taken": time_taken,
+                            "is_correct": is_correct,
+                            "is_resolved": False,
+                            "created_at": datetime.now(timezone.utc)
+                        }))
+                    # --- END INJECTION ---
+
                     match["players"][user_id]["answer_count"] += 1
                     
                     if match["players"][user_id]["answer_count"] >= 5:
