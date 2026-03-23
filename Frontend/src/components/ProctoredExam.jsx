@@ -150,7 +150,7 @@ export default function ProctoredExam() {
       if (!detection) {
         if (!lookAwayTimer.current) {
           lookAwayTimer.current = Date.now();
-        } else if (Date.now() - lookAwayTimer.current > 4000) {
+        } else if (Date.now() - lookAwayTimer.current > 1500) {
           incrementWarning("⚠️ WARNING: Please look directly at the screen!");
           lookAwayTimer.current = null;
         }

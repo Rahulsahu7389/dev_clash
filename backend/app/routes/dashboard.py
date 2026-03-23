@@ -40,11 +40,12 @@ async def get_dashboard_metrics(current_user: dict = Depends(get_current_user)):
         start_of_day = datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
         end_of_day = start_of_day + timedelta(days=1)
         
-        # We query activity_logs correctly
-        action_count = await db.activity_logs.count_documents({
-            "user_id": {"$in": [user_id, ObjectId(user_id)]},
-            "timestamp": {"$gte": start_of_day, "$lt": end_of_day}
+        # We query activity_logs correctly safely
+        action_doc = await db.activity_logs.find_one({
+            "user_id": {"$in": [str(user_id), ObjectId(user_id)]},
+            "date": date_str
         })
+        action_count = action_doc.get("count", 0) if action_doc else 0
         
         heatmap.append({"date": date_str, "count": action_count})
         

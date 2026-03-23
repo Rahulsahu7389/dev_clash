@@ -84,6 +84,7 @@
 
 
 from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
+from app.utils.activity import log_user_activity
 from typing import List
 from datetime import datetime, timedelta
 from app.models.srs import SRSRecordSchema
@@ -246,6 +247,9 @@ async def ask_question(request: AskRequest, current_user: dict = Depends(get_cur
         "timestamp": now
     }
     await db.vault_chat_logs.insert_one(chat_log)
+    
+    # --- ACTIVITY LOGGING ---
+    await log_user_activity(db, str(user_id))
     
     return answer_result
 

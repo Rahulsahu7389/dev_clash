@@ -1,5 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
 from app.core.security import get_current_user_ws
+from app.utils.activity import log_user_activity
 from app.core.database import get_database
 from app.services.arena import manager
 from app.services.llm import generate_mcqs, generate_mcqs_from_context, generate_vault_mcqs, generate_adaptive_pyqs
@@ -340,6 +341,9 @@ async def websocket_arena(
             msg_type = data.get("type", "").upper()
             
             if msg_type == "ANSWER_SUBMITTED":
+                # --- ACTIVITY LOGGING ---
+                await log_user_activity(db, str(user_id))
+                
                 is_correct = data.get("is_correct", False)
                 time_taken = data.get("time_taken", 0)
                 current_q_idx = data.get("question_idx", 0)
