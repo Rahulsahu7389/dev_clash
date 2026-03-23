@@ -736,3 +736,75 @@ async def generate_vault_mcqs(doc_ids: list[str], track: str) -> list[dict]:
             await asyncio.sleep(1)
             
     return FALLBACK_MCQS
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW: Daily Mission Planner
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def generate_daily_plan(days_remaining: int, pending_topics: list[str], urgent_srs: list[str]) -> list[dict]:
+    """Generates optimized daily mission based on user progress."""
+    system_instruction = (
+        "You are an elite AI study planner. Based on the user's days remaining, "
+        "pending syllabus, and urgent decaying memory topics, generate an optimal daily mission. "
+        "Output a JSON array of up to 3 objects: { 'task_title', 'reasoning', 'action_type', 'target_topic' }. "
+        "'action_type' MUST be exactly one of: 'vault_study', 'arena_practice', 'revision'. "
+        "Do not output markdown code blocks. Output pure JSON."
+    )
+    
+    prompt = (
+        f"Days Remaining: {days_remaining}\n"
+        f"Pending Syllabus: {pending_topics}\n"
+        f"Urgent Decaying Memory Topics: {urgent_srs}\n\n"
+        "Generate a strictly optimal daily mission matching the exact JSON array schema."
+    )
+    
+    schema = {
+        "type": "ARRAY",
+        "items": {
+            "type": "OBJECT",
+            "properties": {
+                "task_title": {"type": "STRING"},
+                "reasoning": {"type": "STRING"},
+                "action_type": {"type": "STRING"},
+                "target_topic": {"type": "STRING"}
+            },
+            "required": ["task_title", "reasoning", "action_type", "target_topic"]
+        }
+    }
+    
+    payload = {
+        "system_instruction": {"parts": [{"text": system_instruction}]},
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.3,
+            "responseMimeType": "application/json",
+            "responseSchema": schema
+        }
+    }
+    
+    import asyncio
+    import json
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=45.0) as client:
+                response = await client.post(GEMINI_URL, json=payload)
+            if response.status_code == 200:
+                data = response.json()
+                raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                import re
+                match = re.search(r'\[.*\]', raw_text, re.DOTALL)
+                if match:
+                    raw_text = match.group(0)
+                plan = json.loads(raw_text)
+                if isinstance(plan, list):
+                    return plan
+        except Exception as e:
+            logger.error(f"Planner attempt {attempt+1} failed: {e}")
+            await asyncio.sleep(1)
+            
+    return [{
+        "task_title": "Study Pending Topic",
+        "reasoning": "Fallback mission tracking algorithm.",
+        "action_type": "vault_study",
+        "target_topic": pending_topics[0] if pending_topics else "General Study"
+    }]
